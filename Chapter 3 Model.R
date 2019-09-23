@@ -73,6 +73,17 @@ outdata$DIComb <- outdata$IDhs + outdata$IDhr
 outdata$EUIComb <- outdata$IEUhs + outdata$IEUhr 
 outdata$nEUIComb <- outdata$InEUhs + outdata$InEUhr
 
+#Manipulating the Data for a stacked bar plot - to show the relative proportions from each country
+equidf <- data.frame(matrix(NA, ncol = 4, nrow = 3))
+colnames(equidf) <- c("Category","Domestic","European", "nonEuropean")
+equidf[1] <- c("ICombH", "Sensitive", "Resistant")
+equidf[2] <- c(outdata$DIComb[length(outdata$DIComb)], outdata$IDhs[length(outdata$IDhs)], 
+               outdata$IDhr[length(outdata$IDhr)]) 
+equidf[3] <- c(outdata$EUIComb[length(outdata$DIComb)], outdata$IEUhs[length(outdata$IEUhs)],
+               outdata$IEUhr[length(outdata$IEUhr)]) 
+equidf[4] <- c(outdata$nEUIComb[length(outdata$nEUIComb)], outdata$InEUhs[length(outdata$InEUhs)], 
+               outdata$InEUhr[length(outdata$InEUhr)])  
+
 #The bar chart plot will need to be when the model is at equilbirum - length(outdata) or something similar 
 
 ###Plotting Output for Basic Script####
@@ -93,9 +104,12 @@ ggplot(outdata, aes(time)) +
         legend.position="bottom", legend.title = element_blank(),
         legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
 
-
 #Bar Chart Plot 
- 
+plot_ly(equidf, x = ~Category, y = ~Domestic, type = "bar", name = "Domestic") %>%
+  add_trace(y = ~European, name = "European") %>%
+  add_trace(y = ~nonEuropean, name = "nonEuropean") %>%
+  layout(yaxis = list(title = "Proportion of Infecteds"), barmode = "stack")
+
 
 #Simplified Animal Populations  
 ggplot(outdata, aes(time)) +
