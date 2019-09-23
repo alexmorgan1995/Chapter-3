@@ -68,27 +68,50 @@ parms = c(betaDaa = 0.1, betaEUaa = 0.1, betanEUaa = 0.1, betaDha = 0.01, betaEU
           
 out <- ode(y = init, func = amrhet, times = times1, parms = parms)
 
+outdata <- data.frame(out)
+outdata$DIComb <- outdata$IDhs + outdata$IDhr 
+outdata$EUIComb <- outdata$IEUhs + outdata$IEUhr 
+outdata$nEUIComb <- outdata$InEUhs + outdata$InEUhr
+
+#The bar chart plot will need to be when the model is at equilbirum - length(outdata) or something similar 
+
 ###Plotting Output for Basic Script####
 
-#Simplified Human Population 
+#Simplified Human Population - For all human populations 
 ggplot(outdata, aes(time)) +
   geom_line(aes(y = Sh, colour = "Sh"), size = 1.1) +
-  geom_line(aes(y = Ih, colour = "Ih"), size = 2.5, alpha =0.6) + 
-  geom_line(aes(y = Irh, colour = "Irh"), size = 1.1) +
-  geom_line(aes(y = combIh, colour = "combIh"), size = 1.1, linetype = "dashed") +
-  scale_color_manual(values = c("Sh" = "chartreuse3", "Ih" = "red", "Irh" = "blue", "combIh" = "black"), 
-                     labels = c(expression(paste("Overall Infection ","(I"["CombH"],")")),
-                                expression(paste("Resistant Infection ","(I"["RH"],")")),
-                                expression(paste("Sensitive Infection ","(I"["H"],")")),
-                                expression(paste("Susceptible ","(S"["H"],")"))), 
-                     guide = guide_legend(reverse = TRUE)) +
+  geom_line(aes(y = IDhs, colour = "IDhs"), size = 1.1) + 
+  geom_line(aes(y = IDhr, colour = "IDhr"), size = 1.1) +
+  geom_line(aes(y = IEUhs, colour = "IEUhs"), size = 1.1) +
+  geom_line(aes(y = IEUhr, colour = "IEUhr"), size = 1.1) + 
+  geom_line(aes(y = InEUhs, colour = "InEUhs"), size = 1.1) +
+  geom_line(aes(y = InEUhr, colour = "InEUhr"), size = 1.1) +
   labs(x ="Time (Days)", y = "Proportion of Human Population") +
-  scale_x_continuous(limits = c(0,1000), expand = c(0,0)) +
-  scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+  scale_x_continuous(limits = c(0,10000), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0,0.000001), expand = c(0,0)) +
   theme(axis.line.x = element_line(color="black", size = 1),
         legend.position="bottom", legend.title = element_blank(),
         legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
 
+
+#Bar Chart Plot 
+ 
+
+#Simplified Animal Populations  
+ggplot(outdata, aes(time)) +
+  geom_line(aes(y = Sh, colour = "Sh"), size = 1.1) +
+  geom_line(aes(y = IDhs, colour = "IDhs"), size = 1.1) + 
+  geom_line(aes(y = IDhr, colour = "IDhr"), size = 1.1) +
+  geom_line(aes(y = IEUhs, colour = "IEUhs"), size = 1.1) +
+  geom_line(aes(y = IEUhr, colour = "IEUhr"), size = 1.1) + 
+  geom_line(aes(y = InEUhs, colour = "InEUhs"), size = 1.1) +
+  geom_line(aes(y = InEUhr, colour = "InEUhr"), size = 1.1) +
+  labs(x ="Time (Days)", y = "Proportion of Human Population") +
+  scale_x_continuous(limits = c(0,10000), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0,0.000001), expand = c(0,0)) +
+  theme(axis.line.x = element_line(color="black", size = 1),
+        legend.position="bottom", legend.title = element_blank(),
+        legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
 
 #Human Population 
 ggplot(outdata, aes(time)) +
@@ -130,5 +153,4 @@ ggplot(outdata, aes(time)) +
         legend.position="bottom", legend.title = element_blank(),
         legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
 
-# Bar Chart Plot 
 
