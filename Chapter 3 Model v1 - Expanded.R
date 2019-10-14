@@ -16,15 +16,15 @@ library("reshape2")
 
 amrhet <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
-    dSDa = - betaDaa*(IDas + IDar*alpha) + rA*(IDas+IDar) + tauD*IDas + eta - eta*SDa
+    dSDa = - betaDaa*(IDas + IDar*alpha)*SDa + rA*(IDas+IDar) + tauD*IDas + eta - eta*SDa
     dIDas = betaDaa*IDas*SDa - rA*IDas - tauD*IDas - tauD*theta*IDas + phi*IDar - eta*IDas
     dIDar = betaDaa*IDar*SDa*alpha + tauD*theta*IDas - phi*IDar - rA*IDar - eta*IDar 
     
-    dSEUa = - betaEUaa*(IEUas + IEUar*alpha) + rA*(IEUas+IEUar) + tauEU*IEUas + eta - eta*SEUa
+    dSEUa = - betaEUaa*(IEUas + IEUar*alpha)*SEUa + rA*(IEUas+IEUar) + tauEU*IEUas + eta - eta*SEUa
     dIEUas = betaEUaa*IEUas*SEUa - rA*IEUas - tauEU*IEUas - tauEU*theta*IEUas + phi*IEUar - eta*IEUas
     dIEUar = betaEUaa*IEUar*SEUa*alpha + tauEU*theta*IEUas - phi*IEUar - rA*IEUar - eta*IEUar 
     
-    dSnEUa = - betanEUaa*(InEUas + InEUar*alpha) + rA*(InEUas+InEUar) + taunEU*InEUas + eta - eta*SnEUa
+    dSnEUa = - betanEUaa*(InEUas + InEUar*alpha)*SnEUa + rA*(InEUas+InEUar) + taunEU*InEUas + eta - eta*SnEUa
     dInEUas = betanEUaa*InEUas*SnEUa - rA*InEUas - taunEU*InEUas - taunEU*theta*InEUas + phi*InEUar - eta*InEUas
     dInEUar = betanEUaa*InEUar*SnEUa*alpha + taunEU*theta*InEUas - phi*InEUar - rA*InEUar - eta*InEUar 
     
