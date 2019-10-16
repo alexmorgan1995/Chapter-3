@@ -24,16 +24,16 @@ amrhet <- function(time, state, parameters) {
     dIEUas = betaEUaa*IEUas*SEUa - rA*IEUas - tauEU*IEUas - tauEU*theta*IEUas + phi*IEUar - eta*IEUas
     dIEUar = betaEUaa*IEUar*SEUa*alpha + tauEU*theta*IEUas - phi*IEUar - rA*IEUar - eta*IEUar 
     
-    dSnEUa = - betanEUaa*(InEUas + InEUar*alpha)*SnEUa + rA*(InEUas+InEUar) + taunEU*InEUas + eta - eta*SnEUa
+    dSnEUa = - betanEUaa*(InEUas + (InEUar*alpha))*SnEUa + rA*(InEUas+InEUar) + taunEU*InEUas + eta - eta*SnEUa
     dInEUas = betanEUaa*InEUas*SnEUa - rA*InEUas - taunEU*InEUas - taunEU*theta*InEUas + phi*InEUar - eta*InEUas
     dInEUar = betanEUaa*InEUar*SnEUa*alpha + taunEU*theta*InEUas - phi*InEUar - rA*InEUar - eta*InEUar 
     
-    dSh = - betaDha*(eta*IDas)*Sh*(1 - psiEU + psinEU) - betaDha*(eta*IDar)*Sh*alpha*(1 - psiEU + psinEU) - 
+    dSh = - betaDha*(eta*IDas)*Sh*psiUK - betaDha*(eta*IDar)*Sh*alpha*psiUK - 
       betaEUha*(eta*IEUas)*Sh*psiEU - betaEUha*(eta*IEUar)*Sh*psiEU*alpha - 
       betanEUha*(eta*InEUas)*Sh*psinEU - betanEUha*(eta*InEUar)*Sh*psinEU*alpha + 
       rH*(IDhs + IDhr + IEUhs + IEUhr + InEUhs + InEUhr) + mu - mu*Sh
-    dIDhs = betaDha*(eta*IDas)*Sh*(1 - psiEU + psinEU) - rH*IDhs - mu*IDhs 
-    dIDhr = betaDha*(eta*IDar)*Sh*alpha*(1 - psiEU + psinEU) - rH*IDhr - mu*IDhr
+    dIDhs = betaDha*(eta*IDas)*Sh*psiUK - rH*IDhs - mu*IDhs 
+    dIDhr = betaDha*(eta*IDar)*Sh*psiUK*alpha - rH*IDhr - mu*IDhr
     dIEUhs = betaEUha*(eta*IEUas)*Sh*psiEU - rH*IEUhs - mu*IEUhs
     dIEUhr = betaEUha*(eta*IEUar)*Sh*psiEU*alpha - rH*IEUhr - mu*IEUhr
     dInEUhs = betanEUha*(eta*InEUas)*Sh*psinEU - rH*InEUhs - mu*InEUhs
@@ -60,10 +60,10 @@ times1 <- seq(0,1000,by=1)
 
 #Need to Specify Model Parameters
 
-parms = c(betaDaa = 0.2, betaEUaa = 0.2, betanEUaa = 0.2, betaDha = 0.01, betaEUha = 0.01, betanEUha = 0.01,
+parms = c(betaDaa = 0.1, betaEUaa = 0.1, betanEUaa = 0.1, betaDha = 0.01, betaEUha = 0.01, betanEUha = 0.01,
           tauD = 0.05, tauEU = 0.08, taunEU = 0.1, 
           theta = 0.5, phi = 0.05,
-          psiEU = 0.2, psinEU = 0.1,
+          psiEU = 0.2, psinEU = 0.1, psiUK = 0.7,
           alpha = 0.8, rA = 25^-1, rH = 6^-1, eta = 240^-1, mu = 28835^-1)
           
 out <- ode(y = init, func = amrhet, times = times1, parms = parms)
@@ -73,13 +73,13 @@ outdata$DIComb <- outdata$IDhs + outdata$IDhr
 outdata$EUIComb <- outdata$IEUhs + outdata$IEUhr 
 outdata$nEUIComb <- outdata$InEUhs + outdata$InEUhr
 
-#Creating L I Q U I D code
+#Creating L I Q U I D code - i.e - Melting for GGPLOT
 outdata1 <- outdata
 outdata1[11:20] <- outdata[11:20]*100000 # So only human compartments are scaled to per 100,000 population 
 meltedout <- melt(outdata1, id = "time", variable.name = "Compartment", value.name = "Value")
 
-
 #Manipulating the Data for a stacked bar plot - to show the relative proportions from each country
+#The bar chart plot will need to be when the model is at equilbirum - length(outdata) or something similar 
 equidf <- data.frame(matrix(NA, ncol = 4, nrow = 3))
 colnames(equidf) <- c("Category","Domestic","European", "nonEuropean")
 equidf[1] <- c("ICombH", "Sensitive", "Resistant")
@@ -90,16 +90,13 @@ equidf[3] <- c(outdata$EUIComb[length(outdata$DIComb)], outdata$IEUhs[length(out
 equidf[4] <- c(outdata$nEUIComb[length(outdata$nEUIComb)], outdata$InEUhs[length(outdata$InEUhs)], 
                outdata$InEUhr[length(outdata$InEUhr)])  
 
-#The bar chart plot will need to be when the model is at equilbirum - length(outdata) or something similar 
-
 ###Plotting Output for Basic Script####
 
-#Bar Chart Plot 
+#Bar Chart Plot - to view the relative infecteds 
 plot_ly(equidf, x = ~Category, y = ~Domestic, type = "bar", name = "Domestic") %>%
   add_trace(y = ~European, name = "European") %>%
   add_trace(y = ~nonEuropean, name = "nonEuropean") %>%
   layout(yaxis = list(title = "Proportion of Infecteds"), barmode = "stack")
-
 
 #High Res - Human Infect  
 ggplot(data = meltedout, aes(x = time, y = Value, col = Compartment)) + 
@@ -132,4 +129,88 @@ ggplot(data = meltedout, aes(x = time, y = Value, col = Compartment, linetype = 
   scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
   theme(legend.position="bottom", legend.title = element_blank(),
         legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
+
+#### Sensitivity Analysis ####
+
+start_time <- Sys.time()
+
+#Create the parameter space for the model analysis/sensitivity analysis
+parms = fast_parameters(minimum = c(0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0, 0, 0, 0.05, 0.005, 0.01, 0.01, 0.01, 0, 250^-1, 60^-1, 2400^-1, 
+                                    288350^-1),
+                        maximum = c(1, 1, 1, 0.1, 0.1, 0.1, 1, 1, 1, 2, 0.5, 1, 1, 1, 1, 2.5^-1, 0.6^-1, 24^-1, 2883.5^-1), 
+                        factor=19, names = c("betaDaa", "betaEUaa", "betanEUaa", "betaDha", "betaEUha", "betanEUha", "tauD", "tauEU", "taunEU", 
+                                             "theta", "phi", "psiEU", "psinEU", "psiUK", "alpha", "rA" , "rH" , "eta" , "mu"))
+
+#parms = c(betaDaa = 0.01, betaEUaa = 0.01, betanEUaa = 0.01, betaDha = 0.001, betaEUha = 0.001, betanEUha = 0.001,
+#          tauD = 0, tauEU = 0, taunEU = 0,
+#          theta = 0.05, phi = 0.005,
+#          psiEU = 0.01, psinEU = 0.01, psiUK = 0.01,
+#          alpha = 0, rA = 250^-1, rH = 60^-1, eta = 2400^-1, mu = 288350^-1)
+#parms = c(betaDaa = 0.1, betaEUaa = 0.1, betanEUaa = 0.1, betaDha = 0.01, betaEUha = 0.01, betanEUha = 0.01,
+#          tauD = 0.1, tauEU = 0.1, taunEU = 0.1, 
+#          theta = 0.5, phi = 0.05,
+#          psiEU = 1, psinEU = 1, psiUK = 1,
+#          alpha = 1, rA = 2.5^-1, rH = 0.6^-1, eta = 24^-1, mu = 2883.5^-1)
+#parms = c("betaDaa", "betaEUaa", "betanEUaa", "betaDha", "betaEUha", "betanEUha", "tauD", "tauEU", "taunEU", "theta ", "phi" ,
+#          "psiEU", "psinEU", "psiUK", "alpha", "rA" , "rH" , "eta" , "mu")
+
+init <- c(SDa = 0.98, IDas = 0.01, IDar = 0.01, 
+          SEUa = 0.98, IEUas = 0.01, IEUar = 0.01, 
+          SnEUa = 0.98, InEUas = 0.01, InEUar = 0.01,
+          Sh = 1, IDhs = 0, IDhr = 0, IEUhs = 0, IEUhr = 0, InEUhs = 0, InEUhr = 0)
+times <- seq(0,10000, by = 10) 
+
+output <- data.frame()
+
+for (i in 1:nrow(parms)) {
+  temp <- data.frame(matrix(NA, nrow = 1, ncol=8))
+  parms1 = c(betaDaa = parms$betaDaa[i], betaEUaa = parms$betaEUaa[i], betanEUaa = parms$betanEUaa[i],
+             betaDha = parms$betaDha[i], betaEUha = parms$betaEUha[i], betanEUha = parms$betanEUha[i], 
+             tauD = parms$tauD[i], tauEU = parms$tauEU[i], taunEU = parms$taunEU[i], 
+             theta = parms$theta[i], phi = parms$phi[i],
+             psiEU = (parms$psiEU[i]/(parms$psiUK[i]+parms$psiEU[i]+parms$psinEU[i])), 
+             psinEU = (parms$psinEU[i]/(parms$psiUK[i]+parms$psiEU[i]+parms$psinEU[i])), 
+             psiUK = (parms$psiUK[i]/(parms$psiUK[i]+parms$psiEU[i]+parms$psinEU[i])),
+             alpha = parms$alpha[i], rA = parms$rA[i], rH = parms$rH[i], eta = parms$eta[i], mu = parms$mu[i])
+  out <- ode(y = init, func = amrhet, times = times, parms = parms1)
+  temp[1,1] <- (rounding(out[nrow(out),12]) + rounding(out[nrow(out),13])) + (rounding(out[nrow(out),14]) + rounding(out[nrow(out),15])) +
+    (rounding(out[nrow(out),16]) + rounding(out[nrow(out),17]))
+  temp[1,2] <- (rounding(out[nrow(out),13]) + rounding(out[nrow(out),15]) + rounding(out[nrow(out),17])) /  temp[1,1]
+  temp[1,3] <- (rounding(out[nrow(out),12]) + rounding(out[nrow(out),14]) + rounding(out[nrow(out),16]))
+  temp[1,4] <- (rounding(out[nrow(out),12]) + rounding(out[nrow(out),13]))
+  temp[1,5] <- rounding(out[nrow(out),13]) / temp[1,4]
+  temp[1,6] <- (rounding(out[nrow(out),14]) + rounding(out[nrow(out),15])) + (rounding(out[nrow(out),16]) + rounding(out[nrow(out),17]))
+  temp[1,7] <- (rounding(out[nrow(out),15]) + rounding(out[nrow(out),17])) / temp[1,6]
+  temp[1,8] <- as.numeric(parms1[14])
+  print(temp[1,8])
+  output <- rbind.data.frame(output, temp)
+}
+
+colnames(output)[1:8] <- c("OverallInf","OverallResProp","OverallSensProp","DomOverInf","DomResProp", 
+                           "ImpOverInf","ImpResProp","UKUse")
+
+end_time <- Sys.time()
+end_time - start_time
+
+#Plotting and Analysis 
+
+test <- output[complete.cases(output),] # test this against using a 
+
+sensit1 <- output$OverallInf #Creating Variable for the output variable of interest
+sensit2 <- output$OverallResProp #Creating Variable for the output variable of interest
+sensit2[is.nan(sensit2)] <- 0
+sensit3 <- output$ImpOverInf #Creating Variable for the output variable of interest
+sensit4 <- output$ImpResProp #Creating Variable for the output variable of interest
+sensit4[is.nan(sensit4)] <- 0
+
+sens1 <- sensitivity(x=sensit3, numberf=19, make.plot=T, names = c("betaDaa", "betaEUaa", "betanEUaa", "betaDha", "betaEUha", "betanEUha", 
+                                                               "tauD", "tauEU", "taunEU", "theta", "phi", "psiEU", "psinEU", "psiUK", 
+                                                               "alpha", "rA" , "rH" , "eta" , "mu"))
+
+df.equilibrium <- NULL
+df.equilibrium <- data.frame(parameter=rbind("betaDaa", "betaEUaa", "betanEUaa", "betaDha", "betaEUha", "betanEUha", 
+                                             "tauD", "tauEU", "taunEU", "theta", "phi", "psiEU", "psinEU", "psiUK", 
+                                             "alpha", "rA" , "rH" , "eta" , "mu"), value=sens1)
+
+ggplot(df.equilibrium, aes(parameter, value)) + geom_bar(stat="identity", fill="grey23")
 
