@@ -63,10 +63,10 @@ times1 <- seq(0,1000,by=1)
 
 #Need to Specify Model Parameters
 
-parms = c(betaDaa = 0.1, betaEUaa = 0.1, betanEUaa = 0.1, betaDha = 0.01, betaEUha = 0.01, betanEUha = 0.01,
-          tauD = 0.05, tauEU = 0.08, taunEU = 0.1, 
+parms = c(betaDaa = 0.05, betaEUaa = 0.1, betanEUaa = 0.1, betaDha = 0.01, betaEUha = 0.01, betanEUha = 0.01,
+          tauD = 0, tauEU = 0.0876, taunEU = 0.1476, 
           theta = 0.5, phi = 0.05,
-          psiEU = 0.2, psinEU = 0.1, psiUK = 0.7,
+          psiEU = 0.3099, psinEU = 0.0971, psiUK = 0.593,
           alpha = 0.8, rA = 25^-1, rH = 6^-1, eta = 240^-1, mu = 28835^-1)
           
 out <- ode(y = init, func = amrhet, times = times1, parms = parms)
@@ -88,7 +88,7 @@ colnames(equidf) <- c("Category","Domestic","European", "nonEuropean")
 equidf[1] <- c("ICombH", "Sensitive", "Resistant")
 equidf[2] <- c(outdata$DIComb[length(outdata$DIComb)], outdata$IDhs[length(outdata$IDhs)], 
                outdata$IDhr[length(outdata$IDhr)]) 
-equidf[3] <- c(outdata$EUIComb[length(outdata$DIComb)], outdata$IEUhs[length(outdata$IEUhs)],
+equidf[3] <- c(outdata$EUIComb[length(outdata$EUIComb)], outdata$IEUhs[length(outdata$IEUhs)],
                outdata$IEUhr[length(outdata$IEUhr)]) 
 equidf[4] <- c(outdata$nEUIComb[length(outdata$nEUIComb)], outdata$InEUhs[length(outdata$InEUhs)], 
                outdata$InEUhr[length(outdata$InEUhr)])  
@@ -96,10 +96,10 @@ equidf[4] <- c(outdata$nEUIComb[length(outdata$nEUIComb)], outdata$InEUhs[length
 ###Plotting Output for Basic Script####
 
 #Bar Chart Plot - to view the relative infecteds 
-plot_ly(equidf, x = ~Category, y = ~Domestic, type = "bar", name = "Domestic") %>%
-  add_trace(y = ~European, name = "European") %>%
-  add_trace(y = ~nonEuropean, name = "nonEuropean") %>%
-  layout(yaxis = list(title = "Proportion of Infecteds"), barmode = "stack")
+plot_ly(equidf, x = ~Category, y = ~(Domestic*100000), type = "bar", name = "Domestic") %>%
+  add_trace(y = ~(European*100000), name = "European") %>%
+  add_trace(y = ~(nonEuropean*100000), name = "nonEuropean") %>%
+  layout(yaxis = list(title = "Proportion of Infecteds (per 100,000)", range = c(0, 15)), barmode = "stack")
 
 #High Res - Human Infect  
 ggplot(data = meltedout, aes(x = time, y = Value, col = Compartment)) + 
