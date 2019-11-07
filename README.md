@@ -7,7 +7,7 @@ This chapter looks at exploring the effect of both livestock antibiotic usage he
 
 All scripts were written using R-Studio. The base packages used to run this code are:
 
-`library("deSolve"); library("fast"); library("sensitivity"); library("ggplot2"); library("plotly"); library("tidyr")`
+`library("deSolve"); library("fast"); library("sensitivity"); library("ggplot2"); library("plotly"); library("reshape2")`
 
 There are also multiple complexities of AMR models used in this chapter. These include:
 
