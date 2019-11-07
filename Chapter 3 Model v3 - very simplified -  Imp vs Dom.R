@@ -1,6 +1,6 @@
 rm(list=ls())
 
-library("deSolve"); library("fast"); library("sensitivity"); library("ggplot2"); library("plotly"); library("tidyr")
+library("deSolve"); library("fast"); library("sensitivity"); library("ggplot2"); library("plotly"); library("reshape2")
 
 #### Model For Domestic, EU and non-EU Livestock-to-human AMR transmission ####
 
@@ -60,6 +60,7 @@ outdata$IMPIComb <- outdata$IIMPhs + outdata$IIMPhr
 outdata1 <- outdata; outdata1[8:14] <- outdata[8:14]*100000 # So only human compartments are scaled to per 100,000 population 
 meltedout <- melt(outdata1, id = "time", variable.name = "Compartment", value.name = "Value")
 
+#Plotting for Humans
 ggplot(data = meltedout, aes(x = time, y = Value, col = Compartment)) + 
   geom_line(data=(y = meltedout[(as.numeric(which((meltedout$Compartment == "DIComb" & meltedout$time == 0))):
                                    length(meltedout$time)),]), size = 1.1) +
@@ -68,8 +69,7 @@ ggplot(data = meltedout, aes(x = time, y = Value, col = Compartment)) +
   theme(legend.position="bottom", legend.title = element_blank(),
         legend.spacing.x = unit(0.2, 'cm'), legend.text=element_text(size=11), plot.margin=unit(c(0.7,0.7,0.8,0.8),"cm"))
 
-#Manipulating the Data for a stacked bar plot - to show the relative proportions from each country
-#The bar chart plot will need to be when the model is at equilbirum - length(outdata) or something similar 
+#Plotting the relative proportions - Bar Chart
 equidf <- data.frame(matrix(NA, ncol = 3, nrow = 3))
 colnames(equidf) <- c("Category","Domestic","Imported")
 equidf[1] <- c("ICombH", "Sensitive", "Resistant")
@@ -87,17 +87,30 @@ plot_ly(equidf, x = ~Category, y = ~(Domestic*100000), type = "bar", name = "Dom
 
 start_time <- Sys.time()
 
-parms = fast_parameters(minimum = c(0.01, 0.01, 0.0001, 0.0001, 0.0001, 0, 0, 0.05, 0.005, 0, 0.01, 0.01,
-                                    0, 250^-1, 60^-1, 2400^-1, 288350^-1),
-                        maximum = c(1, 1, 0.01, 0.01, 0.01, 1, 1, 2, 0.5, 1, 1, 1, 1, 2.5^-1, 0.6^-1, 24^-1, 2883.5^-1), 
-                        factor= 17, names = c("betaDaa", "betaIMPaa", "betaDha", "betaIMPha", "betahh", "tauD", "tauIMP",  
-                                             "theta", "phi", "kappa1", "psiIMP", "psiUK", "alpha", "rA" , "rH" , "eta" , "mu"))
+parms = fast_parameters(minimum = c(0.01, 0.01, 
+                                    0.0001, 0.0001, 0.0001, 
+                                    0, 0, 
+                                    0, 0, 0, 
+                                    0.01, 0.01, 0, 
+                                    250^-1, 60^-1, 2400^-1, 288350^-1),
+                        maximum = c(1, 1, 
+                                    0.01, 0.01, 0.01, 
+                                    1, 1, 
+                                    1, 1, 1, 
+                                    1, 1, 1, 
+                                    2.5^-1, 0.6^-1, 24^-1, 2883.5^-1), 
+                        factor= 17, names = c("betaDaa", "betaIMPaa", 
+                                              "betaDha", "betaIMPha", "betahh", 
+                                              "tauD", "tauIMP", 
+                                              "theta", "phi", "kappa1", 
+                                              "psiIMP", "psiUK", "alpha", 
+                                              "rA" , "rH" , "eta" , "mu"))
 
 init <- c(SDa = 0.98, IDas = 0.01, IDar = 0.01, 
           SIMPa = 0.98, IIMPas = 0.01, IIMPar = 0.01, 
           Sh = 1, IDhs = 0, IDhr = 0, IIMPhs = 0, IIMPhr = 0)
 
-times <- seq(0,5000, by = 1) 
+times <- seq(0,10000, by = 10) 
 
 output <- data.frame()
 
@@ -110,7 +123,7 @@ for (i in 1:nrow(parms)) {
              psiIMP = (parms$psiIMP[i]/(parms$psiUK[i]+parms$psiIMP[i])), psiUK = (parms$psiUK[i]/(parms$psiUK[i]+parms$psiIMP[i])),
              alpha = parms$alpha[i], rA = parms$rA[i], rH = parms$rH[i], eta = parms$eta[i], mu = parms$mu[i])
   out <- ode(y = init, func = amrhet, times = times, parms = parms1)
-  temp[1,1] <- rounding(sum(as.numeric(out[(length(out[,1])),(9:12)])))
+  temp[1,1] <- rounding(sum(as.numeric(out[(length(out[,1])), (9:12)])))
   temp[1,2] <- rounding(sum(as.numeric(out[(length(out[,1])), c(10, 12)]))) /  temp[1,1]
   temp[1,3] <- rounding(sum(as.numeric(out[(length(out[,1])), c(9, 11)]))) /  temp[1,1]
   temp[1,4] <- rounding(sum(as.numeric(out[(length(out[,1])), c(9, 10)])))
@@ -169,3 +182,4 @@ df.equilibrium4 <- NULL
 df.equilibrium4 <- data.frame(parameter=rbind("betaDaa", "betaIMPaa", "betaDha", "betaIMPha", "betahh", "tauD", "tauIMP",  
                                               "theta", "phi", "kappa1", "psiIMP", "psiUK", "alpha", "rA" , "rH" , "eta" , "mu"), value=sens4)
 ggplot(df.equilibrium4, aes(parameter, value)) + geom_bar(stat="identity", fill="grey23")
+
