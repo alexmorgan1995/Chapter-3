@@ -182,4 +182,3 @@ df.equilibrium4 <- NULL
 df.equilibrium4 <- data.frame(parameter=rbind("betaDaa", "betaIMPaa", "betaDha", "betaIMPha", "betahh", "tauD", "tauIMP",  
                                               "theta", "phi", "kappa1", "psiIMP", "psiUK", "alpha", "rA" , "rH" , "eta" , "mu"), value=sens4)
 ggplot(df.equilibrium4, aes(parameter, value)) + geom_bar(stat="identity", fill="grey23")
-
