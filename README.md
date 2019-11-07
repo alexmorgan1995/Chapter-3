@@ -3,15 +3,13 @@
 
 This chapter looks at exploring the effect of both livestock antibiotic usage heterogeneity and differential levels of food-product import at the country level . This is in relation to a specific country of interest - simplified in the following code using the UK as an example.
 
-There are multiple 
-
 ## Code Details
 
-The base packages used to run this code are:
+All scripts were written using R-Studio. The base packages used to run this code are:
 
 `library("deSolve"); library("fast"); library("sensitivity"); library("ggplot2"); library("plotly"); library("tidyr")`
 
-There are also multiple levels of AMR models used in this section. These include:
+There are also multiple complexities of AMR models used in this chapter. These include:
 
 - AMR model with Domestic and Imported Livestock Food Products
 - AMR model with Domestic, EU and non-EU imported Food Products
