@@ -12,8 +12,9 @@ All scripts were written using R-Studio. The base packages used to run this code
 There are also multiple complexities of AMR models used in this chapter. These include:
 
 - AMR model with Domestic and Imported Livestock Food Products
-- AMR model with Domestic, EU and non-EU imported Food Products
-- AMR model with Domestic and 7 Importing Countries
+  - ```Chapter 3 Model v3 - very simplified - Imp vs Dom.R```
+- AMR model with Domestic, EU and non-EU imported Food Products - "Simplified"
+- AMR model with Domestic and 7 Importing Countries - "Expanded"
   - Denmark
   - Germany
   - Netherlands
