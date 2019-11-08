@@ -34,7 +34,7 @@ rounding <- function(x) {
   } else{signif(as.numeric(x), digits = 6)}
 }
 
-#### Parameters ####
+#### Parameters + Model Run ####
 
 init <- c(SDa = 0.98, IDas = 0.01, IDar = 0.01, 
           SIMPa = 0.98, IIMPas = 0.01, IIMPar = 0.01, 
