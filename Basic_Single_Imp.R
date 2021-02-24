@@ -48,6 +48,8 @@ for (i in 1:2) {
 }
 
 
+#Testing Merge into Master
+
 
 fin_base <- c(abs(output1[1,2] - output1[2,2]),
               abs(output1[1,3] - output1[2,3]))
