@@ -47,6 +47,14 @@ for (i in 1:2) {
   output1 <- rbind.data.frame(output1, temp)
 }
 
+
+#Add test code
+
+
+
+
+
+
 fin_base <- c(abs(output1[1,2] - output1[2,2]),
               abs(output1[1,3] - output1[2,3]))
 
