@@ -1,5 +1,5 @@
 library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_2/Chapter2_Fit_Data/FinalData")
@@ -128,12 +128,11 @@ for (j in 1:length(unique(parmdetails[,1]))) {
       print(paste0("Parameter ",unique(parmdetails[,1])[j], " | ", round(x/101, digits = 2)*100,"%" ))
     }
     
-    colnames(output)[1:7] <- c("FBD_H_0", "FBD_H_123","Res_H_0", "Res_H_123", "delta_FBD", "delta_Res", "ParmValue", "Parm")
-    
-    output <- output[!is.nan(output$PercInc) & !is.nan(output$RelInc) & !is.infinite(output$PercInc),] # Remove 0s and NAs - models which don't lift off 
+    colnames(output)[1:8] <- c("FBD_H_0", "FBD_H_123","Res_H_0", "Res_H_123", "delta_FBD", "delta_Res", "ParmValue", "Parm")
+    print(output)
     
     plotnames <- c(bquote(Imp["FBD"]~Parameter), bquote(Imp["Res"]~Parameter), bquote(psi["Dom"]~Parameter),
-                   bquote(beta["AA"]~Parameter), bquote(beta["HA"]~Parameter), bquote(beta["HH"]~Parameter), bquote(beta["AH"]~Parameter), 
+                   bquote(beta["AA"]~Parameter), bquote(beta["HA"]~Parameter), bquote(beta["HH"]~Parameter),
                    bquote(phi~Parameter), bquote(theta~Parameter), bquote(alpha~Parameter), bquote(zeta~Parameter), bquote(r["H"]~Parameter), bquote(r["A"]~Parameter), 
                    bquote(mu["H"]~Parameter), bquote(mu["A"]~Parameter))[[j]]
     
@@ -142,7 +141,7 @@ for (j in 1:length(unique(parmdetails[,1]))) {
       labs(x = plotnames) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title.y=element_blank())
     
     p2 <- ggplot(output, aes(x = as.numeric(ParmValue), y = as.numeric(delta_Res))) + theme_bw() + geom_line(lwd = 1.02, col ="darkblue") +
-      scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(limits = c(0, max(output$delta_Res)*1.1), expand = c(0, 0)) +
+      scale_x_continuous(expand = c(0, 0)) + scale_y_continuous( expand = c(0, 0)) +
       labs(x = plotnames) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title.y=element_blank())
     
     #if(unique(parmdetails[,1])[j] == "betaHA"){
@@ -156,17 +155,23 @@ for (j in 1:length(unique(parmdetails[,1]))) {
     #if(unique(parmdetails[,1])[j] == "rh"){
      # p2 <- p2 + geom_vline(xintercept = 0.22818182, col = "red", size  = 0.7, lty = 3)}
     
-    return(list(p1,p2))
+    return(list(p1,p2, output))
   })
 }
 
-#Absolute Diff
-pabdiff <- plot_grid(plot_grid(suppplotlist[[1]][[1]], suppplotlist[[2]][[1]], suppplotlist[[3]][[1]],suppplotlist[[4]][[1]], suppplotlist[[5]][[1]], 
+#deltaFBD
+pdelta_FBD <- plot_grid(plot_grid(suppplotlist[[1]][[1]], suppplotlist[[2]][[1]], suppplotlist[[3]][[1]],suppplotlist[[4]][[1]], suppplotlist[[5]][[1]], 
                                suppplotlist[[6]][[1]], suppplotlist[[7]][[1]], suppplotlist[[8]][[1]], suppplotlist[[9]][[1]], suppplotlist[[10]][[1]], suppplotlist[[11]][[1]],
-                               suppplotlist[[12]][[1]], nrow = 4, ncol =3), scale=0.95) + 
-  draw_label("% Change in ICombH Relative to Baseline Usage", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
+                               suppplotlist[[12]][[1]], suppplotlist[[13]][[1]], suppplotlist[[14]][[1]], nrow = 5, ncol =3), scale=0.95) + 
+  draw_label("delta_FBD", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
-ggsave(pabdiff, filename = "Sensitivity_RelInc.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_2/Figures/Redraft_v1")
+pdelta_res <- plot_grid(plot_grid(suppplotlist[[1]][[2]], suppplotlist[[2]][[2]], suppplotlist[[3]][[2]],suppplotlist[[4]][[2]], suppplotlist[[5]][[2]], 
+                                  suppplotlist[[6]][[2]], suppplotlist[[7]][[2]], suppplotlist[[8]][[2]], suppplotlist[[9]][[2]], suppplotlist[[10]][[2]], suppplotlist[[11]][[2]],
+                                  suppplotlist[[12]][[2]], suppplotlist[[13]][[2]], suppplotlist[[14]][[2]], nrow = 5, ncol =3), scale=0.95) + 
+  draw_label("delta_Res", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 
+ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+ggsave(pdelta_res, filename = "delta_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
