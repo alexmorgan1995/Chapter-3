@@ -1,4 +1,4 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
 
 rm(list=ls())
@@ -203,23 +203,40 @@ parmdetails <- data.frame("parms" = c("fracimp", "propres_imp" ,"usage_dom","bet
 
 lhsscaled <- data.frame(matrix(nrow = nrow(lhs), ncol = ncol(lhs)))
 colnames(lhsscaled) <- unique(parmdetails[,1])
-tau_range <- c(0, 0.0123)
 
 for(i in 1:length(parmdetails[,1])) {
   lhsscaled[,i] <- lhs[,i]*(parmdetails[i,3] - parmdetails[i,2]) + parmdetails[i,2]
 }
 
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+times <- seq(0, 200, by = 1)
 modelrunlhs <- data.frame(matrix(nrow = h, ncol = nrow(parmdetails) + 2)) #+2 because I also want to keep track of 2 extra outcome measures
+colnames(modelrunlhs) <- c(unique(parmdetails[,1]), "deltaFBD", "deltaRes")
 
 for(i in 1:h) {
+  temptau <- matrix(nrow = 2, ncol = 2)
   parmslhs <- as.list(lhsscaled[i,])
-  
-  for(j in 1:2) { 
-    
-    
-    }
 
+  for(j in 1:2) { 
+    parmslhstau <- c(parmslhs, "tau" =  c(0, 0.0123)[j])
+    out <- ode(y = init, func = amrimp, times = times, parms = parmslhstau)
+    temp <- c(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])*100000,
+              rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
+    temptau[j,] <-temp
+  }
+  modelrunlhs[i,] <- c(parmslhs, temptau[2,1] - temptau[1,1], temptau[1,2] - temptau[2,2])  
   
-  
+  print(paste0(round((i/h)*100, digits = 2),"%" ))
 }
 
+
+prcc_fbd <- pcc(modelrunlhs[,1:14], modelrunlhs[,15], nboot = 100, rank=TRUE)
+prcc_res <- pcc(modelrunlhs[,1:14], modelrunlhs[,16], nboot = 100, rank=TRUE)
+
+par(mfrow = c(1,2))
+
+plot(prcc_fbd)
+abline(h = 0, col = "red")
+
+plot(prcc_res)
+abline(h = 0, col = "red")
