@@ -1,5 +1,5 @@
 library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_2/Chapter2_Fit_Data/FinalData")
@@ -175,3 +175,51 @@ ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cair
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 ggsave(pdelta_res, filename = "delta_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+
+
+# LHS ---------------------------------------------------------------------
+
+#First thing is to select how many times we want to sample (h) - this is based on the number of "partitions" in our distribution 
+
+parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
+           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.6, fracimp = 0.5, propres_imp = 0.5)
+#This is without tau
+
+h <- 500
+lhs <- maximinLHS(h, length(parms))
+
+#this generates a scaling factor (0,1) - using a uniform distribution for every parameter -random values are sampled from each subsection (of h sections - going vertically)
+#Uniform distribution can be transformed into any distribution using q... function (e.g qnorm) - different columns can have different distributions 
+#the qnorm function - you give it a probability (from the LHS matrix) - put in the parameters of the distribution - and then it gives you the  
+
+parmdetails <- data.frame("parms" = c("fracimp", "propres_imp" ,"usage_dom","betaAA" ,"betaHA" ,"betaHH" ,"phi" ,"theta",
+                                 "alpha", "zeta", "rh", "ra" ,"uh" , "ua" ),
+                          "lbound" = c(0, 0, 0, 0.0029, 0.000001, 0.000001,  0.00131, 0.113,
+                                       0, 0.00497, 55^-1, 600^-1, 288350^-1, 2400^-1),
+                          "ubound" = c(1, 1, 1, 0.29, 0.0001, 0.0001,  0.131, 11.3,
+                                       1, 0.497, 0.55^-1, 6^-1, 2883.5^-1, 24^-1))
+
+#I want to multiply each column with the difference between the lower and upperbound for the particular parameter of interest 
+
+lhsscaled <- data.frame(matrix(nrow = nrow(lhs), ncol = ncol(lhs)))
+colnames(lhsscaled) <- unique(parmdetails[,1])
+tau_range <- c(0, 0.0123)
+
+for(i in 1:length(parmdetails[,1])) {
+  lhsscaled[,i] <- lhs[,i]*(parmdetails[i,3] - parmdetails[i,2]) + parmdetails[i,2]
+}
+
+modelrunlhs <- data.frame(matrix(nrow = h, ncol = nrow(parmdetails) + 2)) #+2 because I also want to keep track of 2 extra outcome measures
+
+for(i in 1:h) {
+  parmslhs <- as.list(lhsscaled[i,])
+  
+  for(j in 1:2) { 
+    
+    
+    }
+
+  
+  
+}
+
