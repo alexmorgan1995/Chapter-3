@@ -233,10 +233,32 @@ for(i in 1:h) {
 prcc_fbd <- pcc(modelrunlhs[,1:14], modelrunlhs[,15], nboot = 100, rank=TRUE)
 prcc_res <- pcc(modelrunlhs[,1:14], modelrunlhs[,16], nboot = 100, rank=TRUE)
 
-par(mfrow = c(1,2))
+#Plotting Delta_FBD PRCC
+plotdf_fbd <- data.frame("parm" = rownames(prcc_fbd[[7]]), as.data.frame(prcc_fbd[[7]]))
+plotdf_fbd$parm <- factor(plotdf_fbd$parm, levels = plotdf_fbd$parm) 
 
-plot(prcc_fbd)
-abline(h = 0, col = "red")
+p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
+  theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
+  scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+                                                                  axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ Delta["FBD"])), x ="Model Parameters", y = "PRCC")
 
-plot(prcc_res)
-abline(h = 0, col = "red")
+#Plotting Delta_RES PRCC
+plotdf_res <- data.frame("parm" = rownames(prcc_res[[7]]), as.data.frame(prcc_res[[7]]))
+plotdf_res$parm <- factor(plotdf_res$parm, levels = plotdf_res$parm) 
+
+p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
+  theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
+  scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+                                                                  axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ Delta["RES"])), x ="Model Parameters", y = "PRCC")
+
+PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
+                      align = "v", labels = c("A","B"), font.label = c(size = 20)) 
+
+#Scatter Plot for LHS and Outcome Measure
+plot(modelrunlhs$alpha,modelrunlhs$deltaRes)
+t2 <- data.frame("rankparm" = rank(modelrunlhs$betaHA),
+                 "delta_fbd" = modelrunlhs$deltaFBD)
+
+plot(t2$rankparm,t2$delta_fbd)
