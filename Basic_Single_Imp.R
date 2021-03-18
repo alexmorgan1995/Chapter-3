@@ -1,5 +1,5 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_2/Chapter2_Fit_Data/FinalData")
@@ -175,3 +175,90 @@ ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cair
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 ggsave(pdelta_res, filename = "delta_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+
+
+# LHS ---------------------------------------------------------------------
+
+#First thing is to select how many times we want to sample (h) - this is based on the number of "partitions" in our distribution 
+
+parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
+           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.6, fracimp = 0.5, propres_imp = 0.5)
+#This is without tau
+
+h <- 500
+lhs <- maximinLHS(h, length(parms))
+
+#this generates a scaling factor (0,1) - using a uniform distribution for every parameter -random values are sampled from each subsection (of h sections - going vertically)
+#Uniform distribution can be transformed into any distribution using q... function (e.g qnorm) - different columns can have different distributions 
+#the qnorm function - you give it a probability (from the LHS matrix) - put in the parameters of the distribution - and then it gives you the  
+
+parmdetails <- data.frame("parms" = c("fracimp", "propres_imp" ,"usage_dom","betaAA" ,"betaHA" ,"betaHH" ,"phi" ,"theta",
+                                 "alpha", "zeta", "rh", "ra" ,"uh" , "ua" ),
+                          "lbound" = c(0, 0, 0, 0.0029, 0.000001, 0.000001,  0.00131, 0.113,
+                                       0, 0.00497, 55^-1, 600^-1, 288350^-1, 2400^-1),
+                          "ubound" = c(1, 1, 1, 0.29, 0.0001, 0.0001,  0.131, 11.3,
+                                       1, 0.497, 0.55^-1, 6^-1, 2883.5^-1, 24^-1))
+
+#I want to multiply each column with the difference between the lower and upperbound for the particular parameter of interest 
+
+lhsscaled <- data.frame(matrix(nrow = nrow(lhs), ncol = ncol(lhs)))
+colnames(lhsscaled) <- unique(parmdetails[,1])
+
+for(i in 1:length(parmdetails[,1])) {
+  lhsscaled[,i] <- lhs[,i]*(parmdetails[i,3] - parmdetails[i,2]) + parmdetails[i,2]
+}
+
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+times <- seq(0, 200, by = 1)
+modelrunlhs <- data.frame(matrix(nrow = h, ncol = nrow(parmdetails) + 2)) #+2 because I also want to keep track of 2 extra outcome measures
+colnames(modelrunlhs) <- c(unique(parmdetails[,1]), "deltaFBD", "deltaRes")
+
+for(i in 1:h) {
+  temptau <- matrix(nrow = 2, ncol = 2)
+  parmslhs <- as.list(lhsscaled[i,])
+
+  for(j in 1:2) { 
+    parmslhstau <- c(parmslhs, "tau" =  c(0, 0.0123)[j])
+    out <- ode(y = init, func = amrimp, times = times, parms = parmslhstau)
+    temp <- c(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])*100000,
+              rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
+    temptau[j,] <-temp
+  }
+  modelrunlhs[i,] <- c(parmslhs, temptau[2,1] - temptau[1,1], temptau[1,2] - temptau[2,2])  
+  
+  print(paste0(round((i/h)*100, digits = 2),"%" ))
+}
+
+
+prcc_fbd <- pcc(modelrunlhs[,1:14], modelrunlhs[,15], nboot = 100, rank=TRUE)
+prcc_res <- pcc(modelrunlhs[,1:14], modelrunlhs[,16], nboot = 100, rank=TRUE)
+
+#Plotting Delta_FBD PRCC
+plotdf_fbd <- data.frame("parm" = rownames(prcc_fbd[[7]]), as.data.frame(prcc_fbd[[7]]))
+plotdf_fbd$parm <- factor(plotdf_fbd$parm, levels = plotdf_fbd$parm) 
+
+p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
+  theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
+  scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+                                                                  axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ Delta["FBD"])), x ="Model Parameters", y = "PRCC")
+
+#Plotting Delta_RES PRCC
+plotdf_res <- data.frame("parm" = rownames(prcc_res[[7]]), as.data.frame(prcc_res[[7]]))
+plotdf_res$parm <- factor(plotdf_res$parm, levels = plotdf_res$parm) 
+
+p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
+  theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
+  scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+                                                                  axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ Delta["RES"])), x ="Model Parameters", y = "PRCC")
+
+PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
+                      align = "v", labels = c("A","B"), font.label = c(size = 20)) 
+
+#Scatter Plot for LHS and Outcome Measure
+plot(modelrunlhs$alpha,modelrunlhs$deltaRes)
+t2 <- data.frame("rankparm" = rank(modelrunlhs$betaHA),
+                 "delta_fbd" = modelrunlhs$deltaFBD)
+
+plot(t2$rankparm,t2$delta_fbd)
