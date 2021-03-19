@@ -2,7 +2,7 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_2/Chapter2_Fit_Data/FinalData")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 
 #Function to remove negative prevalence values and round large DP numbers
 rounding <- function(x) {
@@ -220,7 +220,7 @@ for(i in 1:h) {
   for(j in 1:2) { 
     parmslhstau <- c(parmslhs, "tau" =  c(0, 0.0123)[j])
     out <- ode(y = init, func = amrimp, times = times, parms = parmslhstau)
-    temp <- c(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])*100000,
+    temp <- c((rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000,
               rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
     temptau[j,] <-temp
   }
@@ -256,9 +256,115 @@ p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept
 PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                       align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
+ggsave(PRCC_plot, filename = "LHS_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in")
+
 #Scatter Plot for LHS and Outcome Measure
 plot(modelrunlhs$alpha,modelrunlhs$deltaRes)
 t2 <- data.frame("rankparm" = rank(modelrunlhs$betaHA),
                  "delta_fbd" = modelrunlhs$deltaFBD)
 
 plot(t2$rankparm,t2$delta_fbd)
+
+# Uncertainty Analysis  ---------------------------------------------------
+#This section will involve me overlaying the relationship between antibiotic usage and human resistance and foodborne disease
+#With the every single model run obtained from the LHS sample 
+
+#Run model for baseline parameters
+#Run LHS parameter set and make sure I track fro both human FDB and Res
+#Overlay 
+
+parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
+           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.6, fracimp = 0.5, propres_imp = 0.5)
+
+tau <- seq(0,0.02, by = 0.0005)
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+times <- seq(0, 200, by = 1)
+
+#Baseline Run 
+base_anal <- data.frame(matrix(nrow = length(tau), ncol = 3))
+colnames(base_anal) <- c("FBD", "Res", "tau")
+
+for(j in 1:length(tau)) {
+  parmslhstau <- c(parms, "tau" =  tau[j])
+  out <- ode(y = init, func = amrimp, times = times, parms = parmslhstau)
+  temp <- c(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]),
+            rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])),
+            tau[j])
+  base_anal[j,] <- temp
+  print(paste0(round((j/length(tau))*100, digits = 2),"%" ))
+}
+
+#Uncertainty Analysis
+
+
+parmdetails <- data.frame("parms" = c("fracimp", "propres_imp" ,"usage_dom","betaAA" ,"betaHA" ,"betaHH" ,"phi" ,"theta",
+                                      "alpha", "zeta", "rh", "ra" ,"uh" , "ua" ),
+                          "lbound" = c(0, 0, 0, 0.0029, 0.000001, 0.000001,  0.00131, 0.113,
+                                       0, 0.00497, 55^-1, 600^-1, 288350^-1, 2400^-1),
+                          "ubound" = c(1, 1, 1, 0.29, 0.0001, 0.0001,  0.131, 11.3,
+                                       1, 0.497, 0.55^-1, 6^-1, 2883.5^-1, 24^-1))
+h <- 500; lhs <- maximinLHS(h, length(parms))
+lhsscaled <- data.frame(matrix(nrow = nrow(lhs), ncol = ncol(lhs)))
+colnames(lhsscaled) <- unique(parmdetails[,1])
+for(i in 1:length(parmdetails[,1])) {
+  lhsscaled[,i] <- lhs[,i]*(parmdetails[i,3] - parmdetails[i,2]) + parmdetails[i,2]
+}
+
+uncert_anal <- data.frame(matrix(nrow = h*length(tau), ncol = 4)) #+2 because I also want to keep track of 2 extra outcome measures
+colnames(uncert_anal) <- c("FBD", "Res", "tau","run_n")
+t <- 0
+
+for(i in 1:h) {
+  parmslhs <- as.list(lhsscaled[i,])
+  
+  for(j in 1:length(tau)) { 
+    t <- t + 1 
+    parmslhstau <- c(parmslhs, "tau" =  tau[j])
+    out <- ode(y = init, func = amrimp, times = times, parms = parmslhstau)
+    temp <- c(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]),
+              rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])),
+              tau[j],
+              i)
+    uncert_anal[t,] <- temp
+  }
+  print(paste0(round((i/h)*100, digits = 2),"%" ))
+}
+
+#Combining the two 
+uncert_anal$group <- "LHS Runs"; base_anal$run_n <- uncert_anal$run_n[nrow(uncert_anal)] +1; base_anal$group <- "Baseline"
+combdata <- rbind(uncert_anal, base_anal)
+
+#Plotting
+
+p1_FBD <- ggplot(combdata, aes(x = tau, y = FBD, group = run_n, col = group, size = group, alpha = group)) + geom_line() +
+  scale_y_continuous(limits = c(0, 0.003), expand = c(0, 0)) +  scale_x_continuous(expand = c(0, 0)) +
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+        axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15),
+        legend.position = "bottom", legend.text = element_text(size=14), legend.title = element_blank()) +
+  labs(title = "Uncertainty Analysis (FBD) with LHS runs", x ="Livestock Antibiotic Usage", y = "Human Foodborne Disease") +
+  scale_color_manual(values = c("red", "black")) + scale_size_manual(values = c(1.2, 1)) + scale_alpha_manual(values = c(1, 0.2))
+
+p2_FBD <- ggplot(combdata, aes(x = tau, y = FBD, group = run_n, col = group, size = group, alpha = group)) + geom_line() +
+  scale_y_continuous(limits = c(0.00003, 0.00005), expand = c(0, 0)) + scale_x_continuous(expand = c(0, 0)) +
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), 
+        axis.text=element_text(size=10), axis.title = element_blank(), title = element_blank(),legend.position = "none") +
+  labs(title = "Uncertainty Analysis (FBD) with LHS runs", x ="Livestock Antibiotic Usage", y = "Human Foodborne Disease") +
+  scale_color_manual(values = c("red", "black")) + scale_size_manual(values = c(1.2, 1)) + scale_alpha_manual(values = c(1, 0.2))
+
+p_FBD_comb <- p1_FBD + annotation_custom(ggplotGrob(p2_FBD), xmin = 0.0075, xmax = 0.02, 
+                                   ymin = 0.002, ymax = 0.003)
+
+p_Res <- ggplot(combdata, aes(x = tau, y = Res, group = run_n, col = group, size = group, alpha = group)) + geom_line() +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +  scale_x_continuous(expand = c(0, 0)) +
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
+        axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15),
+        legend.position = "bottom", legend.text = element_text(size=14), legend.title = element_blank()) +
+  labs(title = "Uncertainty Analysis (Res) with LHS runs", x ="Livestock Antibiotic Usage", y = "Proportion of Resistance") +
+  scale_color_manual(values = c("red", "black")) + scale_size_manual(values = c(1.2, 1)) + scale_alpha_manual(values = c(1, 0.2))
+
+
+unc_plot <- ggarrange(p_FBD_comb, p_Res, nrow = 2, ncol = 1,
+                       align = "v", labels = c("A","B"), font.label = c(size = 20)) 
+
+ggsave(unc_plot, filename = "uncertainty_anal.png", dpi = 300, type = "cairo", width = 10, height = 12, units = "in")
+
