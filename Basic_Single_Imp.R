@@ -86,7 +86,8 @@ p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw(
   theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + 
-  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) 
+  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
+  labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
 
 plotdata_imp <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[2],],
                      id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
@@ -100,14 +101,17 @@ p_imp <- ggplot(plotdata_imp, aes(fill = variable, x = tau, y = value)) + theme_
   theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + 
-  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) 
+  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF"))  +
+  labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
 
+ggsave(p_base, filename = "baseline_tauplot.png", dpi = 300, type = "cairo", width = 8, height = 4, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+ggsave(p_imp, filename = "import_tauplot.png", dpi = 300, type = "cairo", width = 8, height = 4, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 
 # Testing for Monotonicity  -----------------------------------------------
 
 #The aim of this section is to look at the relationship of changing each variable on delta_FBD and delta_res
-
-
 parmdetails <- rbind(data.frame("Parameter" = "fracimp", "Value" = seq(0, 1, by = 1/100)),
                      data.frame("Parameter" = "propres_imp", "Value" = seq(0, 1, by = 1/100)),
                      data.frame("Parameter" = "usage_dom", "Value" = seq(0, 1, by = 1/100)),
@@ -352,7 +356,7 @@ modelrunlhs_imp$group <- "Uncertainty_Imp"
 #With the every single model run obtained from the LHS sample 
 
 parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
-           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.6, fracimp = 0.5, propres_imp = 0.5)
+           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 1, fracimp = 0.5, propres_imp = 0.5)
 
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
 times <- seq(0, 200, by = 1)
@@ -380,30 +384,67 @@ baseline_scat <- c(parms,
 # Uncertainty Analysis - Scatter Plots - delta_FBD delta_res/rel_res  ---------------------------------------------------
 
 scatter <- rbind(modelrunlhs, baseline_scat)
+p_dfbd_relfbd <- ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(expand = c(0, 0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"FBD"), y = "relFBD") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
 
-ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous( expand = c(0, 0))
-ggplot(scatter, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+p_dres_relres <- ggplot(scatter, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) + scale_x_continuous(limits = c(-1, 0), expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"Res"), y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
 
-ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
-  scale_y_continuous(expand = c(0, 0))
-ggplot(scatter, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+p_dfbd_dres <- ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
+  scale_y_continuous(limits = c(-1, 0), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"FBD"), y = bquote(""*Delta*"Res")) + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
+
+p_relfbd_relres <- ggplot(scatter, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = "relFBD", y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
+
+p_scatter <- ggarrange(p_dfbd_relfbd, p_dres_relres, p_dfbd_dres, p_relfbd_relres,
+                     nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+
+ggsave(p_scatter, filename = "uncert_scatter_all.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in")
 
 # Uncertainty Analysis - Scatter Plots - IMPORT ONLY - delta_FBD delta_res/rel_res  ---------------------------------------------------
 
 scatter_imp <- rbind(modelrunlhs_imp, baseline_scat)
 
-ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous( expand = c(0, 0)) + scale_x_continuous( expand = c(0, 0))
-ggplot(scatter_imp, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous( expand = c(0, 0)) + scale_x_continuous( expand = c(0, 0))
+p_imp_dfbd_relfbd <- ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(expand = c(0, 0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"FBD"), y = "relFBD") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
 
-ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
-  scale_y_continuous( expand = c(0, 0)) + scale_x_continuous( expand = c(0, 0))
-ggplot(scatter_imp, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
-  scale_y_continuous( expand = c(0, 0)) + scale_x_continuous( expand = c(0, 0))
+p_imp_dres_relres <- ggplot(scatter_imp, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) + scale_x_continuous(limits = c(-1, 0), expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"Res"), y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
+
+p_imp_dfbd_dres <- ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
+  scale_y_continuous(limits = c(-1, 0), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = bquote(""*Delta*"FBD"), y = bquote(""*Delta*"Res")) + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
+
+p_imp_relfbd_relres <- ggplot(scatter_imp, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  labs(x = "relFBD", y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
+  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom")
+
+p_imp_scatter <- ggarrange(p_imp_dfbd_relfbd, p_imp_dres_relres, p_imp_dfbd_dres, p_imp_relfbd_relres,
+                       nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+
+ggsave(p_imp_scatter, filename = "uncert_scatter_imp.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in")
 
 # Uncertainty Analysis - Relationship between Tau and FBD/Res ---------------------------------------------------
 #This section will involve me overlaying the relationship between antibiotic usage and human resistance and foodborne disease
@@ -507,8 +548,3 @@ unc_plot <- ggarrange(p_FBD_comb, p_Res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(unc_plot, filename = "uncertainty_anal.png", dpi = 300, type = "cairo", width = 10, height = 14, units = "in")
-
-
-
-# Visualization of Effect of Import ---------------------------------------
-
