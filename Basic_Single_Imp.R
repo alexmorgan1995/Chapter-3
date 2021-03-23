@@ -19,9 +19,14 @@ amrimp <- function(t, y, parms) {
     dIsa = betaAA*Isa*Sa + phi*Ira - theta*tau*Isa - tau*Isa - ra*Isa - ua*Isa + zeta*Sa
     dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + zeta*Sa*(1-alpha)
     
-    dSh = uh + rh*(Ish+Irh) - (betaHH*Ish*Sh) - (1-alpha)*(betaHH*Irh*Sh) - (betaHA*Isa*Sh) - (1-alpha)*(betaHA*Ira*Sh) - (1-usage_dom)*(betaHA*fracimp*Sh) - uh*Sh 
-    dIsh = betaHH*Ish*Sh + betaHA*Isa*Sh + (betaHA*(betaHA*(1-propres_imp))*Sh) - rh*Ish - uh*Ish 
-    dIrh = (1-alpha)*(betaHH*Irh*Sh) + (1-alpha)*(betaHA*Ira*Sh) + (betaHA*(betaHA*propres_imp)*Sh) - rh*Irh - uh*Irh 
+    dSh = uh + rh*(Ish+Irh) - (betaHH*Ish*Sh) - (1-alpha)*(betaHH*Irh*Sh) - 
+      usage_dom*(betaHA*Isa*Sh) - usage_dom*(1-alpha)*(betaHA*Ira*Sh) - 
+      (1-usage_dom)*(betaHA*fracimp*(1-propres_imp)*Sh) - (1-usage_dom)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - uh*Sh 
+    
+    dIsh = betaHH*Ish*Sh + usage_dom*betaHA*Isa*Sh + (1-usage_dom)*(betaHA*fracimp*(1-propres_imp)*Sh) - rh*Ish - uh*Ish 
+    
+    dIrh = (1-alpha)*(betaHH*Irh*Sh) + (1-alpha)*usage_dom*(betaHA*Ira*Sh) + (1-usage_dom)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
+    
     return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh)))
   })
 }
@@ -33,35 +38,69 @@ amrimp <- function(t, y, parms) {
 
 #Baseline 
 
+parmtau <- seq(0,0.035, by = 0.002)
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
-times <- seq(0, 200, by = 1)
-tauseq <- c(seq(0,0.02, by = 0.001), 0.0123)
+icombhdata <- data.frame(matrix(ncol = 8, nrow = 0))
+times <- seq(0, 200000, by = 100)
 
-output1 <- data.frame(matrix(nrow = length(tauseq), ncol = 5)); colnames(output1) <- c("tau","SensH", "ResH","ICombH", "ResPropH")
-
-for (i in 1:length(tauseq)) {
-  parms2 = c(ra = 60^-1, rh =  (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaAH = 0.00001, betaHH = 0.00001, 
-             betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, tau = tauseq[i], zeta = 0.0497,
-             usage_dom = 0.6,
-             fracimp = 0.5,
-             propres_imp = 0.5)
-  
-  out <- ode(y = init, func = amrimp, times = times, parms = parms2)
-  temp <- c(parms2[["tau"]],
-            rounding(out[nrow(out),6]),
-            rounding(out[nrow(out),7]),
-            rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]),
-            rounding(out[nrow(out),7]) / (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
-  output1[i,] <- temp
+for(j in 1:2) {
+  output1 <- data.frame(matrix(ncol = 8, nrow = length(parmtau)))
+  for (i in 1:length(parmtau)) {
+    temp <- data.frame(matrix(nrow = 1, ncol =8))
+    
+    if(j == 1) {
+      parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, tau = parmtau[i],
+                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 1, fracimp = 0.5, propres_imp = 0.5)
+    } 
+    else {
+      parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, tau = parmtau[i],
+                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.1, fracimp = 0.8, propres_imp = 0.9)
+    }
+    
+    out <- ode(y = init, func = amrimp, times = times, parms = parms2)
+    temp[,1] <- parmtau[i]
+    temp[,2] <- rounding(out[nrow(out),5]) 
+    temp[,3] <- rounding(out[nrow(out),6]) 
+    temp[,4] <- rounding(out[nrow(out),7])
+    temp[,5] <- temp[3] + temp[4]
+    temp[,6] <- signif(as.numeric(temp[4]/temp[5]), digits = 3)
+    temp[,7] <- rounding(out[nrow(out),4]) / (rounding(out[nrow(out),3]) + rounding(out[nrow(out),4]))
+    temp[,8] <- c("baseline", "import")[j]
+    output1[i,] <- temp
+  }
+  icombhdata <- rbind(icombhdata, output1)
 }
 
-fin_base <- c(abs(output1[1,3] - output1[output1$tau == 0.0123,3]),
-              abs(output1[1,4] - output1[output1$tau == 0.0123,4]))
+colnames(icombhdata) <- c("tau", "SuscHumans","InfHumans","ResInfHumans","ICombH","IResRat","IResRatA", "group")
 
 
-meltoutpu1 <- melt(output1, id.vars = "tau", measure.vars = c("ResH","SensH"))
+plotdata <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[1],],
+                 id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
 
-ggplot(meltoutpu1, aes(x = tau, y = value, fill = variable)) + geom_bar(position="stack", stat="identity")
+p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
+  geom_vline(xintercept = 0.0123, alpha = 0.3, size = 2) + 
+  geom_col(color = "black",position= "stack", width  = 0.0015) + scale_x_continuous(expand = c(0, 0.0005)) + 
+  scale_y_continuous(limits = c(0,0.00005), expand = c(0, 0))  + 
+  geom_text(label= c(round(icombhdata$IResRat[icombhdata$group == unique(icombhdata$group)[1]],digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
+            position = "stack", angle = 45) +
+  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) 
+
+plotdata_imp <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[2],],
+                     id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
+
+p_imp <- ggplot(plotdata_imp, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
+  geom_vline(xintercept = 0.0123, alpha = 0.3, size = 2) + 
+  geom_col(color = "black",position= "stack", width  = 0.0015) + scale_x_continuous(expand = c(0, 0.0005)) + 
+  scale_y_continuous(limits = c(0,0.00005), expand = c(0, 0))  + 
+  geom_text(label= c(round(icombhdata$IResRat[icombhdata$group == unique(icombhdata$group)[2]],digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
+            position = "stack", angle = 45) +
+  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) 
 
 
 # Testing for Monotonicity  -----------------------------------------------
@@ -366,7 +405,6 @@ ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col 
 ggplot(scatter_imp, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous( expand = c(0, 0)) + scale_x_continuous( expand = c(0, 0))
 
-
 # Uncertainty Analysis - Relationship between Tau and FBD/Res ---------------------------------------------------
 #This section will involve me overlaying the relationship between antibiotic usage and human resistance and foodborne disease
 #With the every single model run obtained from the LHS sample 
@@ -376,7 +414,7 @@ ggplot(scatter_imp, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = gr
 #Overlay 
 
 parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
-           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.6, fracimp = 0.5, propres_imp = 0.5)
+           betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 1, fracimp = 0.5, propres_imp = 0.5)
 
 tau <- seq(0,0.02, by = 0.0005)
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
@@ -470,4 +508,7 @@ unc_plot <- ggarrange(p_FBD_comb, p_Res, nrow = 2, ncol = 1,
 
 ggsave(unc_plot, filename = "uncertainty_anal.png", dpi = 300, type = "cairo", width = 10, height = 14, units = "in")
 
+
+
+# Visualization of Effect of Import ---------------------------------------
 
