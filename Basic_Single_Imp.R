@@ -43,19 +43,13 @@ init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
 icombhdata <- data.frame(matrix(ncol = 8, nrow = 0))
 times <- seq(0, 200000, by = 100)
 
-for(j in 1:2) {
+for(j in 1:3) {
   output1 <- data.frame(matrix(ncol = 8, nrow = length(parmtau)))
   for (i in 1:length(parmtau)) {
     temp <- data.frame(matrix(nrow = 1, ncol =8))
     
-    if(j == 1) {
       parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, tau = parmtau[i],
-                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 1, fracimp = 0.5, propres_imp = 0.5)
-    } 
-    else {
-      parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, tau = parmtau[i],
-                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = 0.1, fracimp = 0.8, propres_imp = 0.9)
-    }
+                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = c(1, 0.5, 0.1)[j], fracimp = 0.8, propres_imp = 0.9)
     
     out <- ode(y = init, func = amrimp, times = times, parms = parms2)
     temp[,1] <- parmtau[i]
@@ -65,7 +59,7 @@ for(j in 1:2) {
     temp[,5] <- temp[3] + temp[4]
     temp[,6] <- signif(as.numeric(temp[4]/temp[5]), digits = 3)
     temp[,7] <- rounding(out[nrow(out),4]) / (rounding(out[nrow(out),3]) + rounding(out[nrow(out),4]))
-    temp[,8] <- c("baseline", "import")[j]
+    temp[,8] <- c("baseline","import_50", "import_90")[j]
     output1[i,] <- temp
   }
   icombhdata <- rbind(icombhdata, output1)
@@ -89,10 +83,11 @@ p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw(
   scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
   labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
 
-plotdata_imp <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[2],],
-                     id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
 
-p_imp <- ggplot(plotdata_imp, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
+plotdata_imp_50 <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[2],],
+                        id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
+
+p_imp_50 <- ggplot(plotdata_imp_50, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
   geom_vline(xintercept = 0.0123, alpha = 0.3, size = 2) + 
   geom_col(color = "black",position= "stack", width  = 0.0015) + scale_x_continuous(expand = c(0, 0.0005)) + 
   scale_y_continuous(limits = c(0,0.00005), expand = c(0, 0))  + 
@@ -104,9 +99,26 @@ p_imp <- ggplot(plotdata_imp, aes(fill = variable, x = tau, y = value)) + theme_
   scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF"))  +
   labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
 
-ggsave(p_base, filename = "baseline_tauplot.png", dpi = 300, type = "cairo", width = 8, height = 4, units = "in",
+plotdata_imp_90 <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[3],],
+                     id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
+
+p_imp_90 <- ggplot(plotdata_imp_90, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
+  geom_vline(xintercept = 0.0123, alpha = 0.3, size = 2) + 
+  geom_col(color = "black",position= "stack", width  = 0.0015) + scale_x_continuous(expand = c(0, 0.0005)) + 
+  scale_y_continuous(limits = c(0,0.00005), expand = c(0, 0))  + 
+  geom_text(label= c(round(icombhdata$IResRat[icombhdata$group == unique(icombhdata$group)[3]],digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
+            position = "stack", angle = 45) +
+  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF"))  +
+  labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
+
+ggsave(p_base, filename = "baseline_tauplot.png", dpi = 300, type = "cairo", width = 9, height = 4, units = "in",
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
-ggsave(p_imp, filename = "import_tauplot.png", dpi = 300, type = "cairo", width = 8, height = 4, units = "in",
+ggsave(p_imp_50, filename = "import_50_tauplot.png", dpi = 300, type = "cairo", width = 9, height = 4, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+ggsave(p_imp_90, filename = "import_90_tauplot.png", dpi = 300, type = "cairo", width = 9, height = 4, units = "in",
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 
 # Testing for Monotonicity  -----------------------------------------------
@@ -542,7 +554,6 @@ p_Res <- ggplot(combdata, aes(x = tau, y = Res, group = run_n, col = group, size
         legend.position = "bottom", legend.text = element_text(size=14), legend.title = element_blank()) +
   labs(title = "Uncertainty Analysis (Human Res) with LHS runs", x ="Livestock Antibiotic Usage", y = "Proportion of Resistance") +
   scale_color_manual(values = c("red", "black")) + scale_size_manual(values = c(1.2, 1)) + scale_alpha_manual(values = c(1, 0.2))
-
 
 unc_plot <- ggarrange(p_FBD_comb, p_Res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
