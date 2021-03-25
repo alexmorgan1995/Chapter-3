@@ -199,17 +199,6 @@ for (j in 1:length(unique(parmdetails[,1]))) {
       scale_x_continuous(expand = c(0, 0)) + scale_y_continuous( expand = c(0, 0)) +
       labs(x = plotnames) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title.y=element_blank())
     
-    #if(unique(parmdetails[,1])[j] == "betaHA"){
-    #  p2 <- p2 + geom_vline(xintercept = 8.0e-06, col = "red", size  = 0.7, lty = 3)}
-    #if(unique(parmdetails[,1])[j] == "zeta"){
-    #  p2 <- p2 + geom_vline(xintercept = 0.011084193, col = "red", size  = 0.7, lty = 3)}
-    #if(unique(parmdetails[,1])[j] == "ra"){
-    #  p2 <- p2 + geom_vline(xintercept = 0.038333333, col = "red", size  = 0.7, lty = 3)}
-    #if(unique(parmdetails[,1])[j] == "ua"){
-    #  p2 <- p2 + geom_vline(xintercept = 0.0254166667, col = "red", size  = 0.7, lty = 3)}
-    #if(unique(parmdetails[,1])[j] == "rh"){
-     # p2 <- p2 + geom_vline(xintercept = 0.22818182, col = "red", size  = 0.7, lty = 3)}
-    
     return(list(p1,p2, output))
   })
 }
@@ -269,7 +258,7 @@ modelrunlhs <- data.frame(matrix(nrow = h, ncol = nrow(parmdetails) + 4)) #+4 be
 colnames(modelrunlhs) <- c(unique(parmdetails[,1]), "deltaFBD", "deltaRes", "relFBD", "relRes")
 
 for(i in 1:h) {
-  temptau <- matrix(nrow = 2, ncol = 4)
+  temptau <- matrix(nrow = 2, ncol = 2)
   parmslhs <- as.list(lhsscaled[i,])
 
   for(j in 1:2) { 
@@ -278,6 +267,7 @@ for(i in 1:h) {
     temp <- c((rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000,
               rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
     temptau[j,] <-temp
+    print(temptau)
   }
   modelrunlhs[i,] <- c(parmslhs, 
                        temptau[1,1] - temptau[2,1], 
@@ -361,6 +351,7 @@ for(i in 1:h) {
 }
 
 modelrunlhs_imp$group <- "Uncertainty_Imp"
+
 
 
 # Uncertainty Analysis - Baseline Runs  ---------------------------------------------------
@@ -457,6 +448,112 @@ p_imp_scatter <- ggarrange(p_imp_dfbd_relfbd, p_imp_dres_relres, p_imp_dfbd_dres
                        nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
 
 ggsave(p_imp_scatter, filename = "uncert_scatter_imp.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in")
+
+# Uncertainty Scatter - Heat Map --------------------------------------
+
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+times <- seq(0, 200, by = 1)
+imp_comb <- expand.grid("impFBD" = seq(0,1 , by = 0.05), "imp_prop_res" = seq(0,1 , by = 0.05))
+usage_vec <- seq(0.2,0.8, by = 0.2)
+
+heatmap <- list()
+
+for(j in 1:length(usage_vec)) {
+  
+  heatmap[[j]] = local({
+    
+    parametertest <- list()
+    i = 0
+    
+    scendata <- data.frame(matrix(nrow = nrow(imp_comb), ncol = 7))
+    
+    for(i in 1:nrow(imp_comb)) {
+      
+      parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, 
+                 betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, 
+                 fracimp = imp_comb[i,1], propres_imp = imp_comb[i,2], usage_dom = usage_vec[j])
+      temptau <- matrix(nrow = 2, ncol = 2)
+      
+      for(z in 1:2) {
+        parms_temp <- c(parms, "tau" = c(0, 0.0123)[z])
+        out <- data.frame(ode(y = init, func = amrimp, times = times, parms = parms_temp))
+        temp <- c((rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000,
+                  rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
+        temptau[z,] <- temp
+      }
+
+      scendata[i,] <- c("deltafbd" = signif(temptau[1,1] - temptau[2,1], 3), 
+                        "deltares" =  temptau[1,2] - temptau[2,2], 
+                        "relfbd" = temptau[1,1]/temptau[2,1], 
+                        "relres" = temptau[1,2]/temptau[2,2],
+                        
+                        "fracimp" = parms[["fracimp"]],
+                        "propres_imp" = parms[["propres_imp"]],
+                        "usage_dom" = parms[["usage_dom"]])
+    }
+    colnames(scendata) <- c("deltafbd", "deltares", "relfbd","relres", "fracimp", "propres_imp", "usage_dom")
+    parametertest[[z]] <- scendata
+    return(parametertest)
+  })
+}
+
+
+plotheat <- list()
+
+for(i in 1:length(usage_vec)) {
+  
+  plottemp <- list()
+  
+  for(j in 1:4) {
+    scentest <- heatmap[[i]][[2]]
+    if(j==1) {
+      breaks1 <- seq(0, 1, by = 0.1)
+      plot <- ggplot(scentest, aes(fracimp, propres_imp, z = deltafbd))+ metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1) +
+        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+             fill = bquote(Delta*"FBD")) + scale_fill_viridis_c(begin = unique(scentest$deltafbd), end = unique(scentest$deltafbd))
+    }
+    if(j==2) {
+      breaks2 <- seq(-0.3, 0, by = 0.02)
+      plot <- ggplot(scentest, aes(fracimp, propres_imp, z = deltares)) + metR::geom_contour_fill(breaks = breaks2, color = "black", size = 0.1) +
+        scale_fill_viridis_b(breaks = breaks2,  direction = -1,begin = 1-(abs(max(scentest$deltares))/0.3), end = 1-(abs(min(scentest$deltares))/0.3), values = seq(0,1, by =0.1))+
+        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+             fill = bquote(Delta*"RES"))
+    }    
+    if(j==3) {
+      breaks3 <- seq(1, 1.3, by = 0.02) 
+      plot <- ggplot(scentest, aes(fracimp, propres_imp, z = relfbd)) + metR::geom_contour_fill(breaks = breaks3, color = "black", size = 0.1) +
+        scale_fill_viridis_b(breaks = breaks3, begin =  (min(scentest$relfbd)-1)/0.3, end = (max(scentest$relfbd)-1)/0.3, values = seq(0,1, by =0.1))+
+        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+             fill = "RelFBD")
+    }   
+    if(j==4) {
+      breaks4 <- seq(0.25, 1, by = 0.05)
+      plot <- ggplot(scentest, aes(fracimp, propres_imp, z = relres)) + metR::geom_contour_fill(breaks = breaks4, color = "black", size = 0.1) +
+        scale_fill_viridis_b(breaks = breaks4, begin = (min(scentest$relres)-0.25)/ 0.75, end = (max(scentest$relres)-0.25)/ 0.75, values = seq(0, 1, by =0.1)) +
+        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+             fill = "RelRES")
+    }
+    
+    plot <- plot + 
+      scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+      theme(legend.position = "right", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+            axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
+            plot.title = element_text(size = 18, vjust = 3, hjust = 0.1, face = "bold"),
+            legend.spacing.x = unit(0.3, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.75, "cm"),
+            legend.key.width =  unit(2, "cm"))
+    plottemp[[j]] <- plot
+  }
+  
+  combplot <- ggarrange(plottemp[[1]], plottemp[[2]], plottemp[[3]], plottemp[[4]], ncol = 1, nrow = 4,
+                        legend = "bottom", font.label = list(size = 25), vjust = 1.2)
+  
+  plotheat[[i]] <- combplot
+}
+
+for(i in 1:4) {
+  ggsave(plotheat[[i]], filename = paste0("heatmap_imp",c(0.2,0.4,0.6,0.8)[i],".png"), dpi = 300, type = "cairo", width = 7, height = 16, units = "in")
+}
+
 
 # Uncertainty Analysis - Relationship between Tau and FBD/Res ---------------------------------------------------
 #This section will involve me overlaying the relationship between antibiotic usage and human resistance and foodborne disease
@@ -559,3 +656,7 @@ unc_plot <- ggarrange(p_FBD_comb, p_Res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(unc_plot, filename = "uncertainty_anal.png", dpi = 300, type = "cairo", width = 10, height = 14, units = "in")
+
+
+
+
