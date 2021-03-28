@@ -221,6 +221,9 @@ prcc_res_rel <- pcc(modelrunlhs[,1:14], modelrunlhs[,18], nboot = 100, rank=TRUE
 
 modelrunlhs$group <- "Uncertainty" # For later plotting
 
+
+# Plotting the PRCC -------------------------------------------------------
+
 #Plotting Delta_FBD PRCC
 plotdf_fbd <- data.frame("parm" = rownames(prcc_fbd[[7]]), as.data.frame(prcc_fbd[[7]]))
 plotdf_fbd$parm <- factor(plotdf_fbd$parm, levels = plotdf_fbd$parm) 
