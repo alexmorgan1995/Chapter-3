@@ -49,7 +49,7 @@ for(j in 1:3) {
     temp <- data.frame(matrix(nrow = 1, ncol =8))
     
     parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = 0.029, betaHH = 0.00001, tau = parmtau[i],
-               betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = c(1, 0.5, 0.1)[j], fracimp = 0.8, propres_imp = 0.9)
+               betaHA = (0.00001), phi = 0.0131, theta = 1.13, alpha = 0.43, zeta = 0.0497, usage_dom = c(1, 0.5, 0.1)[j], fracimp = 0.5, propres_imp = 0.5)
     
     out <- ode(y = init, func = amrimp, times = times, parms = parms2)
     temp[,1] <- parmtau[i]
