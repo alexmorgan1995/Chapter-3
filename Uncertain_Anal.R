@@ -246,26 +246,26 @@ scatter <- rbind(modelrunlhs, baseline_scat)
 p_dfbd_relfbd <- ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(expand = c(0, 0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"FBD"), y = "relFBD") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_dres_relres <- ggplot(scatter, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) + scale_x_continuous(limits = c(-1, 0), expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"Res"), y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_dfbd_dres <- ggplot(scatter, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
   scale_y_continuous(limits = c(-1, 0), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"FBD"), y = bquote(""*Delta*"Res")) + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_relfbd_relres <- ggplot(scatter, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = "relFBD", y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_scatter <- ggarrange(p_dfbd_relfbd, p_dres_relres, p_dfbd_dres, p_relfbd_relres,
                        nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
@@ -279,31 +279,44 @@ scatter_imp <- rbind(modelrunlhs_imp, baseline_scat)
 p_imp_dfbd_relfbd <- ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(relFBD), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(expand = c(0, 0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"FBD"), y = "relFBD") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_imp_dres_relres <- ggplot(scatter_imp, aes(x = as.numeric(deltaRes), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) + scale_x_continuous(limits = c(-1, 0), expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"Res"), y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_imp_dfbd_dres <- ggplot(scatter_imp, aes(x = as.numeric(deltaFBD), y = as.numeric(deltaRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1)) + 
   scale_y_continuous(limits = c(-1, 0), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = bquote(""*Delta*"FBD"), y = bquote(""*Delta*"Res")) + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title = element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_imp_relfbd_relres <- ggplot(scatter_imp, aes(x = as.numeric(relFBD), y = as.numeric(relRes), col = group, size = group)) + geom_point() + scale_size_manual(values = c(5,1))+ 
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0))  + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   labs(x = "relFBD", y = "relRES") + scale_color_manual(values = c("red", "darkblue")) + 
-  theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
-        legend.title = element_blank(), legend.position = "bottom")
+  theme(plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm"), axis.title= element_text(size=18),axis.text = element_text(size=18), legend.text = element_text(size=18),
+        legend.title = element_blank(), legend.position = "bottom", title = element_text(size=18))
 
 p_imp_scatter <- ggarrange(p_imp_dfbd_relfbd, p_imp_dres_relres, p_imp_dfbd_dres, p_imp_relfbd_relres,
                            nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
 
 ggsave(p_imp_scatter, filename = "uncert_scatter_imp.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in")
+
+
+# Uncertainty Analysis - Compare the All Parameter vs Import Param --------
+
+p_relfbd_relres <- p_relfbd_relres + labs(title = "All Parameters") + 
+  scale_x_continuous(limits = c(1, 3), expand = c(0, 0))
+p_imp_relfbd_relres <- p_imp_relfbd_relres + labs(title = "Only Import Parameters") + 
+  scale_x_continuous(limits = c(1, 3), expand = c(0, 0))
+
+p_compare_scatter <- ggarrange(p_relfbd_relres, p_imp_relfbd_relres,
+                           nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+ggsave(p_compare_scatter, filename = "compare_uncert_scatter_imp.png", dpi = 300, type = "cairo", width = 8, height = 10, units = "in")
 
 # Uncertainty Scatter - Heat Map --------------------------------------
 
@@ -365,28 +378,28 @@ for(i in 1:length(usage_vec)) {
     if(j==1) {
       breaks1 <- seq(0, 1, by = 0.1)
       plot <- ggplot(scentest, aes(fracimp, propres_imp, z = deltafbd))+ metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1) +
-        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+        labs(x = bquote("Proportion of Imports Infected"~"(Imp"["Inf"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
              fill = bquote(Delta*"FBD")) + scale_fill_viridis_c(begin = unique(scentest$deltafbd), end = unique(scentest$deltafbd))
     }
     if(j==2) {
       breaks2 <- seq(-0.3, 0, by = 0.02)
       plot <- ggplot(scentest, aes(fracimp, propres_imp, z = deltares)) + metR::geom_contour_fill(breaks = breaks2, color = "black", size = 0.1) +
         scale_fill_viridis_b(breaks = breaks2,  direction = -1,begin = 1-(abs(max(scentest$deltares))/0.3), end = 1-(abs(min(scentest$deltares))/0.3), values = seq(0,1, by =0.1))+
-        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+        labs(x = bquote("Proportion of Imports Infected"~"(Imp"["Inf"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
              fill = bquote(Delta*"RES"))
     }    
     if(j==3) {
       breaks3 <- seq(1, 1.3, by = 0.02) 
       plot <- ggplot(scentest, aes(fracimp, propres_imp, z = relfbd)) + metR::geom_contour_fill(breaks = breaks3, color = "black", size = 0.1) +
         scale_fill_viridis_b(breaks = breaks3, begin =  (min(scentest$relfbd)-1)/0.3, end = (max(scentest$relfbd)-1)/0.3, values = seq(0,1, by =0.1))+
-        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+        labs(x = bquote("Proportion of Imports Infected"~"(Imp"["Inf"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
              fill = "RelFBD")
     }   
     if(j==4) {
       breaks4 <- seq(0.25, 1, by = 0.05)
       plot <- ggplot(scentest, aes(fracimp, propres_imp, z = relres)) + metR::geom_contour_fill(breaks = breaks4, color = "black", size = 0.1) +
         scale_fill_viridis_b(breaks = breaks4, begin = (min(scentest$relres)-0.25)/ 0.75, end = (max(scentest$relres)-0.25)/ 0.75, values = seq(0, 1, by =0.1)) +
-        labs(x = bquote("Fraction of Imported Food Products Infected"~"(Frac"["Imp"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
+        labs(x = bquote("Proportion of Imports Infected"~"(Imp"["Inf"]*")"), y =bquote("Prop Res Imports"~"(PropRes"["Imp"]*")"),
              fill = "RelRES")
     }
     

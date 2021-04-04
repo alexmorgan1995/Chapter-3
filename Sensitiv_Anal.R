@@ -98,7 +98,7 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
     colnames(output)[1:10] <- c("FBD_H_0", "FBD_H_123","Res_H_0", "Res_H_123", "delta_FBD", "delta_Res","rel_FBD", "rel_Res", "ParmValue", "Parm")
     print(output)
     
-    plotnames <- c(bquote(Imp["FBD"]~Parameter), bquote(Imp["Res"]~Parameter), bquote(psi["Dom"]~Parameter),
+    plotnames <- c(bquote("Imp"["Inf"]~Parameter), bquote("ResProp"["Inf"]~Parameter), bquote(psi~Parameter),
                    bquote(beta["AA"]~Parameter), bquote(beta["HA"]~Parameter), bquote(beta["HH"]~Parameter),
                    bquote(phi~Parameter), bquote(theta~Parameter), bquote(alpha~Parameter), bquote(zeta~Parameter), bquote(r["H"]~Parameter), bquote(r["A"]~Parameter), 
                    bquote(mu["H"]~Parameter), bquote(mu["A"]~Parameter))[[j]]
@@ -226,6 +226,8 @@ modelrunlhs$group <- "Uncertainty" # For later plotting
 
 #Plotting Delta_FBD PRCC
 plotdf_fbd <- data.frame("parm" = rownames(prcc_fbd[[7]]), as.data.frame(prcc_fbd[[7]]))
+plotdf_fbd$parm <- c("ImpInf","ResPropInf", "psi", plotdf_fbd$parm[4:14])
+
 plotdf_fbd$parm <- factor(plotdf_fbd$parm, levels = plotdf_fbd$parm) 
 
 p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
@@ -236,6 +238,7 @@ p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept
 
 #Plotting Delta_RES PRCC
 plotdf_res <- data.frame("parm" = rownames(prcc_res[[7]]), as.data.frame(prcc_res[[7]]))
+plotdf_res$parm <- c("ImpInf","ResPropInf", "psi", plotdf_res$parm[4:14])
 plotdf_res$parm <- factor(plotdf_res$parm, levels = plotdf_res$parm) 
 
 p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
@@ -252,6 +255,7 @@ ggsave(PRCC_plot, filename = "LHS_PRCC.png", dpi = 300, type = "cairo", width = 
 
 #Plotting rel_FBD PRCC
 plotrel_fbd <- data.frame("parm" = rownames(prcc_fbd_rel[[7]]), as.data.frame(prcc_fbd_rel[[7]]))
+plotrel_fbd$parm <- c("ImpInf","ResPropInf", "psi", plotrel_fbd$parm[4:14])
 plotrel_fbd$parm <- factor(plotrel_fbd$parm, levels = plotrel_fbd$parm) 
 
 p_relfbd <- ggplot(plotrel_fbd, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
@@ -262,6 +266,7 @@ p_relfbd <- ggplot(plotrel_fbd, aes(x = parm, y = original)) + geom_hline(yinter
 
 #Plotting rel_RES PRCC
 plotrel_res <- data.frame("parm" = rownames(prcc_res_rel[[7]]), as.data.frame(prcc_res_rel[[7]]))
+plotrel_res$parm <- c("ImpInf","ResPropInf", "psi", plotrel_res$parm[4:14])
 plotrel_res$parm <- factor(plotrel_res$parm, levels = plotrel_res$parm) 
 
 p_relres <- ggplot(plotrel_res, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
