@@ -1,5 +1,5 @@
 library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("ggridges")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data")
@@ -172,7 +172,7 @@ parmdetails <- data.frame("parms" = c("ra", "ua" ,"betaAA","betaHH" ,"betaHI" ,"
                           "ubound" = c(6^-1, 24^-1, m_betaAA*10, 0.0001, 0.0001, 0.0001, 
                                        m_phi*10, m_theta*10, 1, m_zeta*10, 1, 1))
 
-h <- 500
+h <- 1000
 lhs <- maximinLHS(h, nrow(parmdetails))
 
 lhsscaled <- data.frame(matrix(nrow = nrow(lhs), ncol = ncol(lhs)))
@@ -250,24 +250,60 @@ ggsave(uncert_plot, filename = "uncert_usage.png", dpi = 300, type = "cairo", wi
 
 # Distribution of Dilution Effect -----------------------------------------
 
-dist_frame <- data.frame(matrix(nrow = nrow(lhsscaled), ncol = 2))
+dist_frame <- data.frame(matrix(nrow = 0, ncol = 3))
   
-for(i in 1:nrow(lhsscaled)) {
-  data <- usage_frame2[usage_frame2$lhsnumber == i,]
-  dist_frame[i,1] <- i
-  dist_frame[i,2] <- tail(data$Usage[data$RelRes == max(data$RelRes)],1) - tail(data$Usage[data$RelRes <= max(data$RelRes)/2],1)
+for(z in 1:3) {
+  accept <- c(0.25, 0.5, 0.75)[z]
+  temp_frame <- data.frame(matrix(nrow = nrow(lhsscaled), ncol = 3))
+  for(i in 1:nrow(lhsscaled)) {
+    data <- usage_frame2[usage_frame2$lhsnumber == i,]
+    temp_frame[i,1] <- i
+    temp_frame[i,2] <- tail(data$Usage[data$RelRes == max(data$RelRes)],1) - tail(data$Usage[data$RelRes <= max(data$RelRes)*accept],1)
+    temp_frame[i,3] <- accept
+  }
+  dist_frame <- rbind(temp_frame, dist_frame)
 }
 
-hist(dist_frame[,2])
+colnames(dist_frame) <- c("modelrun", "accept", "group")
 
-hist_usage <- ggplot(dist_frame, aes(X2)) + geom_histogram(bins = 20, col = "black", fill = "grey") + theme_bw() +
-  scale_y_continuous(limits = c(0, 60), expand = c(0, 0)) + scale_x_continuous(expand = c(0.01, 0.01)) + 
-  labs(x = "Proportion of Import Food Usage (before 50% Reduction in Intervention)", y = "",
-       title = "Distribution of Acceptable Import") +
-  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), title =  element_text(size=13),
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) 
+#ggplot(dist_frame, aes(x=accept, y=factor(group),  fill=factor(group))) +theme_ridges() +
+#  geom_density_ridges(alpha=0.6, stat="binline", bins=20) + 
+#  labs(x = "Proportion of Import Food Usage (before 50% Reduction in Intervention)", y = "test",
+#       title = "Distribution of Acceptable Import") +
+#  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), title =  element_text(size=13),
+#        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+#        legend.spacing.x = unit(0.3, 'cm')) 
 
-ggsave(hist_usage, filename = "hist_uncert_usage.png", dpi = 300, type = "cairo", width = 6, height = 5, units = "in",
+
+plot_list <- list()
+
+for(i in 1:3) {
+  p1 <- ggplot(dist_frame[dist_frame$group == c(0.25, 0.5, 0.75)[i],], aes(accept)) + geom_histogram(bins = 20, col = "black", fill = "grey") + theme_bw() +
+    scale_y_continuous(limits = c(0, 175), expand = c(0, 0)) + scale_x_continuous(expand = c(0.01, 0.01)) + 
+    labs(x = paste0("Proportion of Food Usage from Imports"), y = "Frequency",
+         title = paste0("Distribution of Import before ", c(75, 50, 25)[i], "+% Reduction in Intervention Efficacy (RelRes)")) +
+    theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=14), legend.title = element_blank(), axis.text=element_text(size=14), title =  element_text(size=14),
+          axis.title.y=element_text(size=14), axis.title.x= element_text(size=14), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+          legend.spacing.x = unit(0.3, 'cm')) 
+  plot_list[[i]] <- p1
+}
+
+pcomb <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], 
+                   nrow = 3, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+ggsave(pcomb, filename = "hist_uncert_usage_1000_3.png", dpi = 300, type = "cairo", width = 10, height = 11, units = "in",
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
 
+
+
+p1 <- ggplot(dist_frame[dist_frame$group ==  0.5,], aes(accept)) + geom_histogram(bins = 20, col = "black", fill = "grey") + theme_bw() +
+  scale_y_continuous(limits = c(0, 125), expand = c(0, 0)) + scale_x_continuous(expand = c(0.01, 0.01)) + 
+  labs(x = bquote("Proportion of Food Usage from Imports (1-"*psi*")"), y = "Frequency",
+       title = paste0("Distribution of Import before 50+% Reduction in Intervention Efficacy (RelRes)")) +
+  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=14), legend.title = element_blank(), axis.text=element_text(size=14), title =  element_text(size=14),
+        axis.title.y=element_text(size=14), axis.title.x= element_text(size=14), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) 
+
+
+ggsave(p1, filename = "hist_uncert_usage_base.png", dpi = 300, type = "cairo", width = 11, height = 8, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
