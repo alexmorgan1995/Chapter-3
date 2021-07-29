@@ -21,7 +21,7 @@ amrimp <- function(t, y, parms) {
     dIsa = betaAA*Isa*Sa + phi*Ira - kappa*tau*Isa - tau*Isa - ra*Isa - ua*Isa + zeta*Sa
     dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + zeta*Sa*(1-alpha)
     
-    dSh = uh + rh*(1-Sh) - 
+    dSh = uh + rh*(1-Sh) - uh*Sh - 
       
       betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshH) - 
       (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhH) - 
@@ -215,11 +215,11 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.003)
-        d_phi <- runif(1, min = 0, max = 0.2)
-        d_kappa <- runif(1, min = 0, max = 10)
+        d_betaAA <- runif(1, min = 0, max = 0.005)
+        d_phi <- runif(1, min = 0, max = 0.15)
+        d_kappa <- runif(1, min = 0, max = 20)
         d_alpha <- rbeta(1, 1.5, 8.5)
-        d_zeta <- runif(1, 0, 0.0002)
+        d_zeta <- runif(1, 0, 0.001)
         
         d_betaHD <- runif(1, 0, 0.002)
         d_betaHI_EU <- runif(1, 0, 0.002)
@@ -307,12 +307,12 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
     ####
   }
   return(N_ITER_list)
-  }
+}
 
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.003, 0.2, 10, 1, 0.002, 0.002, 0.002, 0.002, 1, 1)
+lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=10,nrow=N)
@@ -326,7 +326,7 @@ epsilon_dist <-  c(2, 1.75, 1.5, 1.25, 1, 0.8)
 epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.25, 3.26*0.1)
 epsilon_AMRH <-  c(0.35, 0.35*0.75, 0.35*0.6, 0.35*0.5, 0.35*0.25, 0.35*0.1)
 epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.25, 0.017173052*0.1)
-epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.25, 0.3333333*0.1)
+epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.25, 0.3333333*0.15)
 
 dist_save <- ABC_algorithm(N = 1000, 
               G = 6,
@@ -356,25 +356,20 @@ end_time <- Sys.time(); end_time - start_time
 
 # Looking at Intermediate Posterior ---------------------------------------
 
-post1_tet <- read.csv("complexmodel_ABC_SMC_gen_tet_3.csv") #This is data for pigs 
+post1_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv"), 1))
 
-plot(density(post1_tet$betaAA))
-plot(density(post1_tet$phi))
-plot(density(post1_tet$kappa))
-plot(density(post1_tet$alpha))
-plot(density(post1_tet$zeta))
-plot(density(post1_tet$d_betaHD))
-plot(density(post1_tet$d_betaHI_EU))
-plot(density(post1_tet$d_betaHI_nEU))
-plot(density(post1_tet$d_imp_nEU))
-plot(density(post1_tet$d_propres_impnEU))
-
-
+plot(density(post1_amp$betaAA))
+plot(density(post1_amp$phi))
+plot(density(post1_amp$kappa))
+plot(density(post1_amp$alpha))
+plot(density(post1_amp$zeta))
+plot(density(post1_amp$betaHD))
+plot(density(post1_amp$betaHI_EU))
+plot(density(post1_amp$betaHI_nEU))
+plot(density(post1_amp$imp_nEU))
+plot(density(post1_amp$propres_impnEU))
 
 # Diagnostic Plots --------------------------------------------------------
-
-gpairs::gpairs(post1_tet) 
-GGally::ggpairs(post1_tet) 
 
 my_fn <- function(data, mapping, ...){
   p <- ggplot(data = data, mapping = mapping) + 
@@ -383,13 +378,11 @@ my_fn <- function(data, mapping, ...){
   p
 }
 
-GGally::ggpairs(post1_tet, lower=list(continuous=my_fn)) + theme_bw()
+GGally::ggpairs(post1_amp, lower=list(continuous=my_fn)) + theme_bw()
 
 # Plotting the Resulting Model ----------------------------------------------
-
-post1_tet <- read.csv("complexmodel_ABC_SMC_gen_tet_4.csv") #This is data for pigs 
-MAP_parms <- as.data.frame(map_estimate(post1_tet))
-MAP_parms <- data.frame("parms" = colnames(post1_tet), "mean" = colMeans(post1_tet))
+#MAP_parms <- as.data.frame(map_estimate(post1_tet))
+MAP_parms <- data.frame("parms" = colnames(post1_amp), "mean" = colMeans(post1_amp))
 
 parmtau <- seq(0,0.014, by = 0.001)
 
@@ -408,7 +401,7 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
          IshAnEU = 0,IrhAnEU = 0,
          IshH = 0, IrhH = 0)
 
-output1 <- data.frame(matrix(ncol = 23, nrow = 0))
+output1 <- data.frame(matrix(ncol = 28, nrow = 0))
 times <- seq(0, 10000, by = 1)
 
 plot_analysis <- list()
@@ -422,7 +415,7 @@ for (j in 1:2) {
     
     for (i in 1:length(parmtau)) {
       
-      temp <- data.frame(matrix(NA, nrow = 1, ncol=23))
+      temp <- data.frame(matrix(NA, nrow = 1, ncol=28))
       
       parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = parmtau[i], psi = 0.656,
                 
@@ -434,14 +427,14 @@ for (j in 1:2) {
                 imp5 = country_data_imp[6,"Foodborne_Carriage_2019"], imp6 = country_data_imp[7,"Foodborne_Carriage_2019"], imp7 = country_data_imp[8,"Foodborne_Carriage_2019"], imp8 = country_data_imp[9,"Foodborne_Carriage_2019"],
                 imp8 = country_data_imp[9,"Foodborne_Carriage_2019"], imp9 = country_data_imp[10,"Foodborne_Carriage_2019"],
                 
-                propres_imp1 = country_data_imp[2,"Prop_Tet_Res"], propres_imp2 = country_data_imp[3,"Prop_Tet_Res"], propres_imp3 = country_data_imp[4,"Prop_Tet_Res"], propres_imp4 = country_data_imp[5,"Prop_Tet_Res"], 
-                propres_imp5 = country_data_imp[6,"Prop_Tet_Res"], propres_imp6 = country_data_imp[7,"Prop_Tet_Res"], propres_imp7 = country_data_imp[8,"Prop_Tet_Res"], propres_imp8 = country_data_imp[9,"Prop_Tet_Res"], 
-                propres_imp9 = country_data_imp[10,"Prop_Tet_Res"],
+                propres_imp1 = country_data_imp[2,"Prop_Amp_Res"], propres_imp2 = country_data_imp[3,"Prop_Amp_Res"], propres_imp3 = country_data_imp[4,"Prop_Amp_Res"], propres_imp4 = country_data_imp[5,"Prop_Amp_Res"], 
+                propres_imp5 = country_data_imp[6,"Prop_Amp_Res"], propres_imp6 = country_data_imp[7,"Prop_Amp_Res"], propres_imp7 = country_data_imp[8,"Prop_Amp_Res"], propres_imp8 = country_data_imp[9,"Prop_Amp_Res"], 
+                propres_imp9 = country_data_imp[10,"Prop_Amp_Res"],
                 
-                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = 0.0001, betaHD =  MAP_parms[which(MAP_parms == "d_betaHD"),2],
-                betaHI_EU =  MAP_parms[which(MAP_parms == "d_betaHI_EU"),2], betaHI_nEU = MAP_parms[which(MAP_parms == "d_betaHI_nEU"),2], 
+                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = 0.0001, betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
+                betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2], betaHI_nEU = MAP_parms[which(MAP_parms == "betaHI_nEU"),2], 
                 
-                imp_nEU =  MAP_parms[which(MAP_parms == "d_imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "d_propres_impnEU"),2],
+                imp_nEU =  MAP_parms[which(MAP_parms == "imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "propres_impnEU"),2],
                 phi =  MAP_parms[which(MAP_parms == "phi"),2], kappa =  MAP_parms[which(MAP_parms == "kappa"),2], alpha =  MAP_parms[which(MAP_parms == "alpha"),2], 
                 zeta =  MAP_parms[which(MAP_parms == "zeta"),2])
       
@@ -455,16 +448,18 @@ for (j in 1:2) {
       temp[1,2:13] <- out[nrow(out),seq(7, 29, by = 2)]/totalAMR
       temp[1,14:25] <- sapply(seq(6,28, by = 2), function(x) out[nrow(out),x]) + sapply(seq(7,29, by = 2), function(x) out[nrow(out),x]) 
       temp[1,26] <- sum(out[nrow(out),seq(7, 29, by = 2)])/sum(out[nrow(out),seq(7, 29)]) 
+      temp[1,27] <- out[nrow(out), 4] / sum(out[nrow(out),3:4]) 
+      temp[1,28] <- sum(out[nrow(out),3:4]) 
       
       print(paste0("Run ", j, ": ",temp[1,2]))
       output1 <- rbind.data.frame(output1, temp)
     }
     
-    colnames(output1)[1:26] <- c("tau", "PropRes_Domestic","PropRes_Netherlands","PropRes_Ireland","PropRes_Germany","PropRes_France","PropRes_Spain","PropRes_Italy",
+    colnames(output1)[1:28] <- c("tau", "PropRes_Domestic","PropRes_Netherlands","PropRes_Ireland","PropRes_Germany","PropRes_France","PropRes_Spain","PropRes_Italy",
                                  "PropRes_Belgium","PropRes_Poland","PropRes_Denmark","PropRes_NonEU", "PropRes_Human",
                                  "TotInf_Domestic","TotInf_Netherlands","TotInf_Ireland","TotInf_Germany","TotInf_France","TotInf_Spain","TotInf_Italy",
                                  "TotInf_Belgium","TotInf_Poland","TotInf_Denmark","TotInf_NonEU", "TotInf_Human", 
-                                 "Res_Prop")
+                                 "Res_PropHum", "Res_PropAnim", "Anim_Inf")
     return(output1)
   })
 }
@@ -482,26 +477,54 @@ res_comb <- ggplot(res_plotdata, aes(fill = variable, x = tau, y = value)) + the
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'))  +
-  labs(x ="Domestic Tetracycline Usage in Fattening Pig (g/PCU)", y = "Proportion of Attributable Human Resistance", fill = "Resistance Source")  
+  labs(x ="Domestic Ampicillin Usage in Fattening Pig (g/PCU)", y = "Proportion of Attributable Human Resistance", fill = "Resistance Source")  
 
 inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value*100000)) + theme_bw() +  
   geom_col(color = "black",position= "stack", width  = 0.001) +
-  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1000)) +
-  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Total Human Salmenollosis (per 100,000)", fill = "Resistance Source") +
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 5)) +
+  labs(x ="Ampicillin Sales in Fattening Pig (g/PCU)", y = "Total Human Salmenollosis (per 100,000)", fill = "Resistance Source") +
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))  
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_vline(xintercept = UK_amp, size = 1.2, col = "red", lty = 2)
+  
 
 # Fit to Data -------------------------------------------------------------
 
 plot_check <- data.frame("tau" = plot_analysis[[1]]$tau, "country" = country_data_gen$Country, 
-                         "model_estim" = plot_analysis[[1]]$Res_Prop, "observ" = country_data_gen$propres_tet)
+                         "model_estim" = plot_analysis[[1]]$Res_PropAnim, "observ" = country_data_gen$propres_tet, 
+                         "model_estim_inf" = plot_analysis[[1]]$Anim_Inf)
 
-ggplot(plot_check, mapping = aes(x = tau)) + geom_point(aes(y = observ), size = 2) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
+country_data_gen <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/res_sales_generalfit.csv") #This is data for pigs 
+country_data_gen[,13:14] <- country_data_gen[,13:14]/1000
+
+#Animal Resistance vs Animal Livestock Antibiotic Usage
+anim_plot <- ggplot(plot_check, mapping = aes(x = tau)) + geom_point(aes(y = observ), size = 2) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
-  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Human Salmonella Resistant", fill = "Resistance Source") +
+  labs(x ="Ampicillin Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Salmonella Resistant") +
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))  
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_amp, y = country_data_gen$propres_amp[country_data_gen$Country == "United Kingdom"]) , col = "red", size = 5)
+
+#Animal Infection vs Animal Livestock Antibiotic Usage
+
+anim_plot_inf <- ggplot(plot_check, mapping = aes(x = tau)) + geom_line(aes(y = model_estim_inf), size = 1.2) + theme_bw() +  
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 0.025)) +
+  labs(x ="Ampicillin Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Contaminated") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_amp, y = country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]) , col = "red", size = 5)
 
 
+#Animal Resistance vs Animal Livestock Antibiotic Usage
+plot_check_hum <- plot_check; plot_check_hum$model_estim <- plot_analysis[[1]]$Res_PropHum
+
+hum_plot <- ggplot(plot_check_hum, mapping = aes(x = tau)) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  labs(x ="Ampicillin Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Salmonella Resistant") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_amp, y = 0.3108) , col = "red", size = 5)
