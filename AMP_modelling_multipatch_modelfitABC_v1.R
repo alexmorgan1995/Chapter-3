@@ -200,7 +200,7 @@ start_time <- Sys.time()
 
 #Where G is the number of generations
 prior.non.zero<-function(par){
-  prod(sapply(1:10, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
+  prod(sapply(1:11, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
 
@@ -222,14 +222,16 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         d_zeta <- runif(1, 0, 0.001)
         
         d_betaHD <- runif(1, 0, 0.002)
+        d_betaHH <- runif(1, 0, 0.002)
         d_betaHI_EU <- runif(1, 0, 0.002)
         d_betaHI_nEU <- runif(1, 0, 0.002)
         d_imp_nEU <- runif(1, 0, 1)
         d_propres_impnEU <- runif(1, 0, 1)
         
       } else{ 
-        p <- sample(seq(1,N),1,prob= w.old) # check w.old here
+        p <- sample(seq(1,N),1,prob = w.old) # check w.old here
         par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp)
+        print(par)
         d_betaAA<-par[1]
         d_phi<-par[2]
         d_kappa<-par[3]
@@ -237,14 +239,15 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         d_zeta <- par[5]
         
         d_betaHD <- par[6]
-        d_betaHI_EU <- par[7]
-        d_betaHI_nEU <- par[8]
-        d_imp_nEU <- par[9]
-        d_propres_impnEU <- par[10]
+        d_betaHH <- par[7]
+        d_betaHI_EU <- par[8]
+        d_betaHI_nEU <- par[9]
+        d_imp_nEU <- par[10]
+        d_propres_impnEU <- par[11]
       }
       
       
-      if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU))) {
+      if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU))) {
         m <- 0
         
         thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = tau_range[i], psi = 0.656,
@@ -261,7 +264,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
                        propres_imp5 = data_match[6,"Prop_Amp_Res"], propres_imp6 = data_match[7,"Prop_Amp_Res"], propres_imp7 = data_match[8,"Prop_Amp_Res"], propres_imp8 = data_match[9,"Prop_Amp_Res"], 
                        propres_imp9 = data_match[10,"Prop_Amp_Res"],
                        
-                       betaAA = d_betaAA, betaHH = 0.00001, betaHD = d_betaHD,
+                       betaAA = d_betaAA, betaHH = d_betaHH, betaHD = d_betaHD,
                        betaHI_EU = d_betaHI_EU, betaHI_nEU = d_betaHI_nEU, 
                        
                        imp_nEU = d_imp_nEU, propres_impnEU = d_propres_impnEU,
@@ -274,7 +277,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
            (dist[4] <= epsilon_foodA[g]) && (dist[5] <= epsilon_AMRA[g]) && (!is.na(dist))) {
           
           # Store results
-          res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU) 
+          res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU) 
           dist_data[i,] <- dist
           print(res.new[i,])
           
@@ -284,7 +287,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
             w.new[i] <- 1
             
           } else {
-            w1<-prod(c(sapply(c(1:3,5:10), function(b) dunif(res.new[i,b], min=lm.low[b], max=lm.upp[b])),
+            w1<-prod(c(sapply(c(1:3,5:11), function(b) dunif(res.new[i,b], min=lm.low[b], max=lm.upp[b])),
                        dbeta(res.new[i,4], 1.5, 8.5))) 
             w2<-sum(sapply(1:N, function(a) w.old[a]* dtmvnorm(res.new[i,], mean=res.old[a,], sigma=sigma, lower=lm.low, upper=lm.upp)))
             w.new[i] <- w1/w2
@@ -302,7 +305,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
     res.old <- res.new
     print(res.old)
     w.old <- w.new/sum(w.new)
-    colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHI_EU", "betaHI_nEU", "imp_nEU", "propres_impnEU")
+    colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH","betaHI_EU", "betaHI_nEU", "imp_nEU", "propres_impnEU")
     write.csv(res.new, file = paste("complexmodel_ABC_SMC_gen_amp_",g,".csv",sep=""), row.names=FALSE)
     ####
   }
@@ -311,12 +314,12 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
-lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 1, 1)
+lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 0.002, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
-res.old<-matrix(ncol=10,nrow=N)
-res.new<-matrix(ncol=10,nrow=N)
+res.old<-matrix(ncol=11,nrow=N)
+res.new<-matrix(ncol=11,nrow=N)
 
 # Empty vectors to store weights
 w.old<-matrix(ncol=1,nrow=N)
@@ -348,7 +351,7 @@ dist_save <- ABC_algorithm(N = 1000,
                              IshA9 = 0,IrhA9 = 0,
                              IshAnEU = 0,IrhAnEU = 0,
                              IshH = 0, IrhH = 0), 
-              times = seq(0, 2000, by = 10), 
+              times = seq(0, 2000, by = 50), 
               data = country_data_gen,
               data_match = country_data_imp)
 
@@ -358,12 +361,14 @@ end_time <- Sys.time(); end_time - start_time
 
 post1_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv"), 1))
 
+par(mfrow = c(3,4))
 plot(density(post1_amp$betaAA))
 plot(density(post1_amp$phi))
 plot(density(post1_amp$kappa))
 plot(density(post1_amp$alpha))
 plot(density(post1_amp$zeta))
 plot(density(post1_amp$betaHD))
+plot(density(post1_amp$betaHH))
 plot(density(post1_amp$betaHI_EU))
 plot(density(post1_amp$betaHI_nEU))
 plot(density(post1_amp$imp_nEU))
@@ -381,10 +386,10 @@ my_fn <- function(data, mapping, ...){
 GGally::ggpairs(post1_amp, lower=list(continuous=my_fn)) + theme_bw()
 
 # Plotting the Resulting Model ----------------------------------------------
-#MAP_parms <- as.data.frame(map_estimate(post1_tet))
+
 MAP_parms <- data.frame("parms" = colnames(post1_amp), "mean" = colMeans(post1_amp))
 
-parmtau <- seq(0,0.014, by = 0.001)
+parmtau <- seq(0, 0.014, by = 0.001)
 
 init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
          Sh = 1,
@@ -408,8 +413,8 @@ plot_analysis <- list()
 
 for (j in 1:2) {
   
-  parmtau <- list(country_data_gen$scaled_sales_tet,
-                  seq(0,0.014, by = 0.001))[[j]]
+  parmtau <- list(country_data_gen$scaled_sales_amp,
+                  seq(0, UK_amp, by = 0.001))[[j]]
   
   plot_analysis[[j]] <- local({
     
@@ -431,7 +436,7 @@ for (j in 1:2) {
                 propres_imp5 = country_data_imp[6,"Prop_Amp_Res"], propres_imp6 = country_data_imp[7,"Prop_Amp_Res"], propres_imp7 = country_data_imp[8,"Prop_Amp_Res"], propres_imp8 = country_data_imp[9,"Prop_Amp_Res"], 
                 propres_imp9 = country_data_imp[10,"Prop_Amp_Res"],
                 
-                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = 0.0001, betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
+                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = MAP_parms[which(MAP_parms == "betaHH"),2], betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
                 betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2], betaHI_nEU = MAP_parms[which(MAP_parms == "betaHI_nEU"),2], 
                 
                 imp_nEU =  MAP_parms[which(MAP_parms == "imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "propres_impnEU"),2],
@@ -471,6 +476,8 @@ res_plotdata$variable <- factor(trim_names, levels = unique(trim_names))
 inf_plotdata <- melt(plot_analysis[[2]], id.vars = c("tau"), measure.vars = colnames(plot_analysis[[1]])[14:25]) 
 inf_plotdata$variable <- factor(trim_names, levels = unique(trim_names))
 
+#Model Output - Attribution Plots 
+
 res_comb <- ggplot(res_plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() +  
   geom_col(color = "black",position= "stack", width  = 0.001) +
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
@@ -487,7 +494,6 @@ inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value*100000)
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + 
   geom_vline(xintercept = UK_amp, size = 1.2, col = "red", lty = 2)
-  
 
 # Fit to Data -------------------------------------------------------------
 
@@ -516,7 +522,6 @@ anim_plot_inf <- ggplot(plot_check, mapping = aes(x = tau)) + geom_line(aes(y = 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + 
   geom_point(aes(x = UK_amp, y = country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]) , col = "red", size = 5)
-
 
 #Animal Resistance vs Animal Livestock Antibiotic Usage
 plot_check_hum <- plot_check; plot_check_hum$model_estim <- plot_analysis[[1]]$Res_PropHum

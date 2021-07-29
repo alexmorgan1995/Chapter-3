@@ -199,7 +199,7 @@ start_time <- Sys.time()
 
 #Where G is the number of generations
 prior.non.zero<-function(par){
-  prod(sapply(1:10, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
+  prod(sapply(1:11, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
 ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, init.state, times, data, data_match) {
@@ -220,6 +220,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         d_zeta <- runif(1, 0, 0.001)
         
         d_betaHD <- runif(1, 0, 0.002)
+        d_betaHH <- runif(1, 0, 0.002)
         d_betaHI_EU <- runif(1, 0, 0.002)
         d_betaHI_nEU <- runif(1, 0, 0.002)
         d_imp_nEU <- runif(1, 0, 1)
@@ -235,14 +236,15 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         d_zeta <- par[5]
         
         d_betaHD <- par[6]
-        d_betaHI_EU <- par[7]
-        d_betaHI_nEU <- par[8]
-        d_imp_nEU <- par[9]
-        d_propres_impnEU <- par[10]
+        d_betaHH <- par[7]
+        d_betaHI_EU <- par[8]
+        d_betaHI_nEU <- par[9]
+        d_imp_nEU <- par[10]
+        d_propres_impnEU <- par[11]
       }
       
       
-      if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU))) {
+      if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU))) {
         m <- 0
         
         thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = tau_range[i], psi = 0.656,
@@ -259,7 +261,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
                        propres_imp5 = data_match[6,"Prop_Tet_Res"], propres_imp6 = data_match[7,"Prop_Tet_Res"], propres_imp7 = data_match[8,"Prop_Tet_Res"], propres_imp8 = data_match[9,"Prop_Tet_Res"], 
                        propres_imp9 = data_match[10,"Prop_Tet_Res"],
                        
-                       betaAA = d_betaAA, betaHH = 0.00001, betaHD = d_betaHD,
+                       betaAA = d_betaAA, betaHH = d_betaHH, betaHD = d_betaHD,
                        betaHI_EU = d_betaHI_EU, betaHI_nEU = d_betaHI_nEU, 
                        
                        imp_nEU = d_imp_nEU, propres_impnEU = d_propres_impnEU,
@@ -271,7 +273,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
            (dist[4] <= epsilon_foodA[g]) && (dist[5] <= epsilon_AMRA[g]) && (!is.na(dist))) {
           
           # Store results
-          res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU) 
+          res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_betaHI_nEU, d_imp_nEU, d_propres_impnEU) 
           dist_data[i,] <- dist
           print(res.new[i,])
           
@@ -281,7 +283,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
             w.new[i] <- 1
             
           } else {
-            w1<-prod(c(sapply(c(1:3,5:10), function(b) dunif(res.new[i,b], min=lm.low[b], max=lm.upp[b])),
+            w1<-prod(c(sapply(c(1:3,5:11), function(b) dunif(res.new[i,b], min=lm.low[b], max=lm.upp[b])),
                        dbeta(res.new[i,4], 1.5, 8.5))) 
             w2<-sum(sapply(1:N, function(a) w.old[a]* dtmvnorm(res.new[i,], mean=res.old[a,], sigma=sigma, lower=lm.low, upper=lm.upp)))
             w.new[i] <- w1/w2
@@ -298,7 +300,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
     res.old <- res.new
     print(res.old)
     w.old <- w.new/sum(w.new)
-    colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHI_EU", "betaHI_nEU", "imp_nEU", "propres_impnEU")
+    colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH", "betaHI_EU", "betaHI_nEU", "imp_nEU", "propres_impnEU")
     write.csv(res.new, file = paste("complexmodel_ABC_SMC_gen_tet_",g,".csv",sep=""), row.names=FALSE)
     ####
   }
@@ -307,21 +309,21 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
-lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 1, 1)
+lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 0.002, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
-res.old<-matrix(ncol=10,nrow=N)
-res.new<-matrix(ncol=10,nrow=N)
+res.old<-matrix(ncol=11,nrow=N)
+res.new<-matrix(ncol=11,nrow=N)
 
 # Empty vectors to store weights
 w.old<-matrix(ncol=1,nrow=N)
 w.new<-matrix(ncol=1,nrow=N)
 
 epsilon_dist <-  c(2, 1.75, 1.5, 1.25, 1, 0.8)
-epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.25, 3.26*0.1)
-epsilon_AMRH <-  c(0.35, 0.35*0.75, 0.35*0.6, 0.35*0.5, 0.35*0.25, 0.35*0.1)
-epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.25, 0.017173052*0.1)
+epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.25, 3.26*0.15)
+epsilon_AMRH <-  c(0.35, 0.35*0.75, 0.35*0.6, 0.35*0.5, 0.35*0.25, 0.35*0.15)
+epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.25, 0.017173052*0.15)
 epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.25, 0.3333333*0.15)
 
 dist_save <- ABC_algorithm(N = 1000, 
@@ -344,7 +346,7 @@ dist_save <- ABC_algorithm(N = 1000,
                              IshA9 = 0,IrhA9 = 0,
                              IshAnEU = 0,IrhAnEU = 0,
                              IshH = 0, IrhH = 0), 
-              times = seq(0, 2000, by = 10), 
+              times = seq(0, 2000, by = 50), 
               data = country_data_gen,
               data_match = country_data_imp)
 
@@ -376,12 +378,22 @@ my_fn <- function(data, mapping, ...){
 
 GGally::ggpairs(post1_tet, lower=list(continuous=my_fn)) + theme_bw()
 
+# Diagnostic Plots --------------------------------------------------------
+
+my_fn <- function(data, mapping, ...){
+  p <- ggplot(data = data, mapping = mapping) + 
+    stat_density2d(aes(fill=..density..), geom="tile", contour = FALSE) +
+    scale_fill_gradientn(colours=viridis::viridis(100))
+  p
+}
+
+GGally::ggpairs(post1_tet, lower=list(continuous=my_fn)) + theme_bw()
+
 # Plotting the Resulting Model ----------------------------------------------
 
-#MAP_parms <- as.data.frame(map_estimate(post1_tet))
 MAP_parms <- data.frame("parms" = colnames(post1_tet), "mean" = colMeans(post1_tet))
 
-parmtau <- seq(0,0.014, by = 0.001)
+parmtau <- seq(0, 0.014, by = 0.001)
 
 init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
          Sh = 1,
@@ -398,7 +410,7 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
          IshAnEU = 0,IrhAnEU = 0,
          IshH = 0, IrhH = 0)
 
-output1 <- data.frame(matrix(ncol = 27, nrow = 0))
+output1 <- data.frame(matrix(ncol = 28, nrow = 0))
 times <- seq(0, 10000, by = 1)
 
 plot_analysis <- list()
@@ -406,13 +418,13 @@ plot_analysis <- list()
 for (j in 1:2) {
   
   parmtau <- list(country_data_gen$scaled_sales_tet,
-                  seq(0,0.014, by = 0.001))[[j]]
+                  seq(0, UK_tet, by = 0.001))[[j]]
   
   plot_analysis[[j]] <- local({
     
     for (i in 1:length(parmtau)) {
       
-      temp <- data.frame(matrix(NA, nrow = 1, ncol=27))
+      temp <- data.frame(matrix(NA, nrow = 1, ncol=28))
       
       parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = parmtau[i], psi = 0.656,
                 
@@ -428,7 +440,7 @@ for (j in 1:2) {
                 propres_imp5 = country_data_imp[6,"Prop_Tet_Res"], propres_imp6 = country_data_imp[7,"Prop_Tet_Res"], propres_imp7 = country_data_imp[8,"Prop_Tet_Res"], propres_imp8 = country_data_imp[9,"Prop_Tet_Res"], 
                 propres_imp9 = country_data_imp[10,"Prop_Tet_Res"],
                 
-                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = 0.0001, betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
+                betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = MAP_parms[which(MAP_parms == "betaHH"),2], betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
                 betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2], betaHI_nEU = MAP_parms[which(MAP_parms == "betaHI_nEU"),2], 
                 
                 imp_nEU =  MAP_parms[which(MAP_parms == "imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "propres_impnEU"),2],
@@ -446,16 +458,17 @@ for (j in 1:2) {
       temp[1,14:25] <- sapply(seq(6,28, by = 2), function(x) out[nrow(out),x]) + sapply(seq(7,29, by = 2), function(x) out[nrow(out),x]) 
       temp[1,26] <- sum(out[nrow(out),seq(7, 29, by = 2)])/sum(out[nrow(out),seq(7, 29)]) 
       temp[1,27] <- out[nrow(out), 4] / sum(out[nrow(out),3:4]) 
+      temp[1,28] <- sum(out[nrow(out),3:4]) 
       
       print(paste0("Run ", j, ": ",temp[1,2]))
       output1 <- rbind.data.frame(output1, temp)
     }
     
-    colnames(output1)[1:27] <- c("tau", "PropRes_Domestic","PropRes_Netherlands","PropRes_Ireland","PropRes_Germany","PropRes_France","PropRes_Spain","PropRes_Italy",
+    colnames(output1)[1:28] <- c("tau", "PropRes_Domestic","PropRes_Netherlands","PropRes_Ireland","PropRes_Germany","PropRes_France","PropRes_Spain","PropRes_Italy",
                                  "PropRes_Belgium","PropRes_Poland","PropRes_Denmark","PropRes_NonEU", "PropRes_Human",
                                  "TotInf_Domestic","TotInf_Netherlands","TotInf_Ireland","TotInf_Germany","TotInf_France","TotInf_Spain","TotInf_Italy",
                                  "TotInf_Belgium","TotInf_Poland","TotInf_Denmark","TotInf_NonEU", "TotInf_Human", 
-                                 "Res_PropHum", "Res_PropAnim")
+                                 "Res_PropHum", "Res_PropAnim", "Anim_Inf")
     return(output1)
   })
 }
@@ -467,6 +480,8 @@ res_plotdata$variable <- factor(trim_names, levels = unique(trim_names))
 inf_plotdata <- melt(plot_analysis[[2]], id.vars = c("tau"), measure.vars = colnames(plot_analysis[[1]])[14:25]) 
 inf_plotdata$variable <- factor(trim_names, levels = unique(trim_names))
 
+#Model Output - Attribution Plots 
+
 res_comb <- ggplot(res_plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() +  
   geom_col(color = "black",position= "stack", width  = 0.001) +
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
@@ -477,20 +492,48 @@ res_comb <- ggplot(res_plotdata, aes(fill = variable, x = tau, y = value)) + the
 
 inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value*100000)) + theme_bw() +  
   geom_col(color = "black",position= "stack", width  = 0.001) +
-  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1000)) +
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 5)) +
   labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Total Human Salmenollosis (per 100,000)", fill = "Resistance Source") +
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))  
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_vline(xintercept = UK_tet, size = 1.2, col = "red", lty = 2)
 
 # Fit to Data -------------------------------------------------------------
 
 plot_check <- data.frame("tau" = plot_analysis[[1]]$tau, "country" = country_data_gen$Country, 
-                         "model_estim" = plot_analysis[[1]]$Res_Prop, "observ" = country_data_gen$propres_tet)
+                         "model_estim" = plot_analysis[[1]]$Res_PropAnim, "observ" = country_data_gen$propres_tet, 
+                         "model_estim_inf" = plot_analysis[[1]]$Anim_Inf)
 
-ggplot(plot_check, mapping = aes(x = tau)) + geom_point(aes(y = observ), size = 2) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
+country_data_gen <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/res_sales_generalfit.csv") #This is data for pigs 
+country_data_gen[,13:14] <- country_data_gen[,13:14]/1000
+
+#Animal Resistance vs Animal Livestock Antibiotic Usage
+anim_plot <- ggplot(plot_check, mapping = aes(x = tau)) + geom_point(aes(y = observ), size = 2) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
-  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Human Salmonella Resistant", fill = "Resistance Source") +
+  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Salmonella Resistant") +
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))  
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_tet, y = country_data_gen$propres_tet[country_data_gen$Country == "United Kingdom"]) , col = "red", size = 5)
+
+#Animal Infection vs Animal Livestock Antibiotic Usage
+
+anim_plot_inf <- ggplot(plot_check, mapping = aes(x = tau)) + geom_line(aes(y = model_estim_inf), size = 1.2) + theme_bw() +  
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 0.025)) +
+  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Contaminated") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_tet, y = country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]) , col = "red", size = 5)
+
+#Animal Resistance vs Animal Livestock Antibiotic Usage
+plot_check_hum <- plot_check; plot_check_hum$model_estim <- plot_analysis[[1]]$Res_PropHum
+
+hum_plot <- ggplot(plot_check_hum, mapping = aes(x = tau)) + geom_line(aes(y = model_estim), size = 1.2) + theme_bw() +  
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Domestic Livestock Salmonella Resistant") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  geom_point(aes(x = UK_tet, y = 0.3108) , col = "red", size = 5)
