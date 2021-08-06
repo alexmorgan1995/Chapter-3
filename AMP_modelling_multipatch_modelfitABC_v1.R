@@ -357,6 +357,8 @@ dist_save <- ABC_algorithm(N = 1000,
 
 end_time <- Sys.time(); end_time - start_time
 
+saveRDS(dist_save, file = "dist_amp_list.rds")
+
 # Looking at Intermediate Posterior ---------------------------------------
 
 post1_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv"), 1))

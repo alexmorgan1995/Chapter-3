@@ -188,7 +188,7 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
   return(c(distanceABC(list(sum.stats), data, 
                        tauoutput[!tauoutput$tau == UK_tet,]),
            abs(tauoutput$ICombH[tauoutput$tau == UK_tet] - 3.26),
-           abs(tauoutput$ResPropHum[tauoutput$tau == UK_tet] - 0.35),
+           abs(tauoutput$ResPropHum[tauoutput$tau == UK_tet] - 0.197),
            abs(tauoutput$ICombA[tauoutput$tau == UK_tet] - 0.017173052),
            abs(tauoutput$propres_tet[tauoutput$tau == UK_tet] - 0.3333333)))
 }
@@ -213,16 +213,16 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.005)
-        d_phi <- runif(1, min = 0, max = 0.15)
-        d_kappa <- runif(1, min = 0, max = 20)
+        d_betaAA <- runif(1, min = 0, max = 0.01)
+        d_phi <- runif(1, min = 0, max = 0.2)
+        d_kappa <- runif(1, min = 0, max = 50)
         d_alpha <- rbeta(1, 1.5, 8.5)
         d_zeta <- runif(1, 0, 0.001)
         
         d_betaHD <- runif(1, 0, 0.002)
-        d_betaHH <- runif(1, 0, 0.002)
+        d_betaHH <- runif(1, 0, 0.01)
         d_betaHI_EU <- runif(1, 0, 0.002)
-        d_betaHI_nEU <- runif(1, 0, 0.002)
+        d_betaHI_nEU <- runif(1, 0, 0.0025)
         d_imp_nEU <- runif(1, 0, 1)
         d_propres_impnEU <- runif(1, 0, 1)
         
@@ -310,7 +310,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.005, 0.15, 20, 1, 0.001, 0.002, 0.002, 0.002, 0.002, 1, 1)
+lm.upp <- c(0.01, 0.2, 50, 1, 0.001, 0.002, 0.01, 0.002, 0.0025, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=11,nrow=N)
@@ -320,14 +320,14 @@ res.new<-matrix(ncol=11,nrow=N)
 w.old<-matrix(ncol=1,nrow=N)
 w.new<-matrix(ncol=1,nrow=N)
 
-epsilon_dist <-  c(2, 1.75, 1.5, 1.25, 1, 0.8)
-epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.25, 3.26*0.15)
-epsilon_AMRH <-  c(0.35, 0.35*0.75, 0.35*0.6, 0.35*0.5, 0.35*0.25, 0.35*0.15)
-epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.25, 0.017173052*0.15)
-epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.25, 0.3333333*0.15)
+epsilon_dist <-  c(2, 1.75, 1.5, 1.25, 1, 0.9, 0.8)
+epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.25, 3.26*0.15, 3.26*0.1)
+epsilon_AMRH <-  c(0.197, 0.197*0.75, 0.197*0.6, 0.197*0.5, 0.197*0.25, 0.197*0.15, 0.197*0.1)
+epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.25, 0.017173052*0.15, 0.017173052*0.1)
+epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.25, 0.3333333*0.15, 0.3333333*0.1)
 
 dist_save <- ABC_algorithm(N = 1000, 
-              G = 6,
+              G = 7,
               sum.stats = summarystatprev, 
               distanceABC = sum_square_diff_dist, 
               fitmodel = amrimp, 
@@ -368,17 +368,6 @@ plot(density(post1_tet$betaHI_EU))
 plot(density(post1_tet$betaHI_nEU))
 plot(density(post1_tet$imp_nEU))
 plot(density(post1_tet$propres_impnEU))
-
-# Diagnostic Plots --------------------------------------------------------
-
-my_fn <- function(data, mapping, ...){
-  p <- ggplot(data = data, mapping = mapping) + 
-    stat_density2d(aes(fill=..density..), geom="tile", contour = FALSE) +
-    scale_fill_gradientn(colours=viridis::viridis(100))
-  p
-}
-
-GGally::ggpairs(post1_tet, lower=list(continuous=my_fn)) + theme_bw()
 
 # Diagnostic Plots --------------------------------------------------------
 
