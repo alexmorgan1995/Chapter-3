@@ -205,7 +205,6 @@ map_zeta <- mean(data5[,"zeta"])
 map_fracimp <- mean(data5[,"fracimp"]) 
 map_propres_imp <- mean(data5[,"propres_imp"]) 
 
-
 plot(density(data5[,"phi"]))
 plot(density(data5[,"theta"]))
 plot(density(data5[,"betaAA"]))
@@ -213,3 +212,73 @@ plot(density(data5[,"alpha"]))
 plot(density(data5[,"zeta"]))
 plot(density(data5[,"fracimp"]))
 plot(density(data5[,"propres_imp"]))
+
+
+MAP <- rbind(data1,data2,data3, data4,data5)
+
+# Plot the ABC Posterior Distributions -------------------------------------------------
+
+plotlist1 <- list()
+
+
+for (i in 1:(length(colnames(MAP))-1)) { # Loop over loop.vector
+  
+  dens <- density(MAP[,colnames(MAP)[i]][MAP$group == "data5"])
+  dataplot <- melt(MAP, id.vars = "group", measure.vars = colnames(MAP)[i])
+  
+  plotlist1[[i]] <- local({
+    i = i
+    p1 <- ggplot(dataplot, aes(x=value, fill=group)) + geom_density(alpha=.5) + theme_bw()  +
+      scale_fill_discrete(labels = c("Generation 1", "Generation 2", "Generation 3", "Generation 4", "Generation 5"))+
+      theme(legend.text=element_text(size=13), axis.text.x=element_text(size=11),axis.ticks.y=element_blank(), axis.text.y=element_blank(),
+            axis.title.y=element_text(size=11), axis.title.x= element_text(size=11), plot.margin = unit(c(0.25,0.4,0.15,0.55), "cm"),
+            plot.title = element_text(size = 15, vjust = 3, hjust = 0.5, face = "bold"))
+    
+    if(colnames(MAP)[i] == "phi") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,0.04), expand = c(0, 0), name = expression(paste("Rate of Resistance Reversion (", phi, ")"))) +
+        labs(fill = NULL, title = "Tetracycline Sales in Fattening Pigs") + 
+        scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ") 
+    }
+    if(colnames(MAP)[i] == "theta") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,2),expand = c(0, 0), name = expression(paste("Efficacy of Antibiotic-Mediated Recovery (", theta, ")"))) +
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, 1), expand = c(0, 0), name = " ") 
+    }
+    if(colnames(MAP)[i] == "betaAA") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,0.2),expand = c(0, 0), name = expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")))+
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ")
+    }
+    if(colnames(MAP)[i] == "alpha") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,0.8),expand = c(0, 0), name = expression(paste("Antibiotic-Resistant Fitness Cost (", alpha, ")"))) +
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ")
+    }
+    if(colnames(MAP)[i] == "zeta") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,0.3),expand = c(0, 0), name = expression(paste("Background Infection Rate (", zeta, ")"))) +
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ")
+    }
+    if(colnames(MAP)[i] == "fracimp") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,1),expand = c(0, 0), name = expression(paste("Proportion of Imports Infected (", Frac[Imp], ")"))) +
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ")
+    }
+    if(colnames(MAP)[i] == "propres_imp") {
+      p1 <- p1 + scale_x_continuous(limits = c(0,1),expand = c(0, 0), name = expression(paste("Proportion of Infected Imports Resistant (", PropRes[Imp], ")"))) +
+        labs(fill = NULL, title = "") + scale_y_continuous(limits = c(0, max(dens$y)*1.2), expand = c(0, 0), name = " ")
+    }
+    
+    p1 <- p1 + geom_vline(xintercept = mean(dataplot$value[dataplot$group == "data5"]), size  = 1.2, color = "red", alpha = 0.5)
+    
+    return(p1)
+    
+  })
+  print(paste0("Plot Parameter: ",colnames(MAP)[i]))
+}
+
+
+abc <- ggarrange(plotlist1[[1]], plotlist1[[2]], plotlist1[[3]],
+                 plotlist1[[4]], plotlist1[[5]], plotlist1[[6]],
+                 plotlist1[[7]],
+                 nrow = 3, ncol =3,
+                 font.label = c(size = 20), common.legend = TRUE, legend = "bottom",
+                 align = "hv", vjust = 1.05)
+
+ggsave(abc, filename = "ABC_SMC_Post_IMPORT.png", dpi = 300, type = "cairo", width = 12, height = 10, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
