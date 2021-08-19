@@ -215,15 +215,15 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.05)
-        d_phi <- runif(1, min = 0, max = 0.5)
-        d_kappa <- runif(1, min = 0, max = 250)
+        d_betaAA <- runif(1, min = 0, max = 0.075)
+        d_phi <- runif(1, min = 0, max = 0.75)
+        d_kappa <- runif(1, min = 0, max = 350)
         d_alpha <- rbeta(1, 1.5, 8.5)
-        d_zeta <- runif(1, 0, 0.002)
+        d_zeta <- runif(1, 0, 0.003)
         
-        d_betaHD <- runif(1, 0, 0.005)
-        d_betaHH <- runif(1, 0, 0.05)
-        d_betaHI_EU <- runif(1, 0, 0.004)
+        d_betaHD <- runif(1, 0, 0.003)
+        d_betaHH <- runif(1, 0, 0.03)
+        d_betaHI_EU <- runif(1, 0, 0.0005)
         d_imp_nEU <- runif(1, 0, 1)
         d_propres_impnEU <- runif(1, 0, 1)
         
@@ -250,9 +250,10 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         
         thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = tau_range[i], psi = 0.656,
                        
-                       fracimp1 = data_match[2,"Corrected_Usage_18"], fracimp2 = data_match[3,"Corrected_Usage_18"], fracimp3 = data_match[4,"Corrected_Usage_18"], fracimp4 = data_match[5,"Corrected_Usage_18"], 
-                       fracimp5 = data_match[6,"Corrected_Usage_18"], fracimp6 = data_match[7,"Corrected_Usage_18"], fracimp7 = data_match[8,"Corrected_Usage_18"], fracimp8 = data_match[9,"Corrected_Usage_18"], 
-                       fracimp9 = data_match[10,"Corrected_Usage_18"], fracimp_nEU = 1 - sum(country_data_imp[1:10,"Corrected_Usage_18"]),
+                       fracimp1 = as.numeric(data_match[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(data_match[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(data_match[4,"Normalised_Usage_2018"]), 
+                       fracimp4 = as.numeric(data_match[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(data_match[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(data_match[7,"Normalised_Usage_2018"]), 
+                       fracimp7 = as.numeric(data_match[8,"Normalised_Usage_2018"]), fracimp8 = as.numeric(data_match[9,"Normalised_Usage_2018"]), 
+                       fracimp9 = as.numeric(data_match[10,"Normalised_Usage_2018"]), fracimp_nEU = 1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"])),
                        
                        imp1 = data_match[2,"Foodborne_Carriage_2019"], imp2 = data_match[3,"Foodborne_Carriage_2019"], imp3 = data_match[4,"Foodborne_Carriage_2019"], imp4 = data_match[5,"Foodborne_Carriage_2019"], 
                        imp5 = data_match[6,"Foodborne_Carriage_2019"], imp6 = data_match[7,"Foodborne_Carriage_2019"], imp7 = data_match[8,"Foodborne_Carriage_2019"], imp8 = data_match[9,"Foodborne_Carriage_2019"],
@@ -277,7 +278,6 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
           # Store results
           res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_imp_nEU, d_propres_impnEU) 
           dist_data[i,] <- dist
-          print(res.new[i,])
           
           # Calculate weights
           if(g==1){
@@ -310,10 +310,10 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 }
 
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
-
+1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"]))
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.05, 0.5, 250, 1, 0.002, 0.005, 0.05, 0.004, 1, 1)
+lm.upp <- c(0.075, 0.75, 350, 1, 0.003, 0.003, 0.03, 0.0005, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=10,nrow=N)
@@ -360,6 +360,29 @@ saveRDS(dist_save, file = "dist_amp_list.rds")
 # Looking at Intermediate Posterior ---------------------------------------
 
 # Assess Posterior --------------------------------------------------------
+
+
+test <- read.csv(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[1])
+
+
+plot(density(test$betaAA))
+plot(density(test$phi))
+plot(density(test$kappa))
+plot(density(test$alpha))
+plot(density(test$betaHD))
+plot(density(test$zeta))
+plot(density(test$betaHH))
+plot(density(test$betaHI_EU))
+plot(density(test$imp_nEU))
+plot(density(test$propres_impnEU))
+
+
+
+
+
+
+
+
 
 amp_post <- do.call(rbind,
                     lapply(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[1:4], read.csv))
