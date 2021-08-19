@@ -443,3 +443,35 @@ for(i in 1:2) {
     return(p_incr)
   })
 }
+
+
+
+# Plotting Baseline Model -------------------------------------------------
+
+output_base <- import_res_func(parms, init, usage_threshold, UK_amp)
+
+# Coordinates of the upper and lower areas
+trsup <- data.frame(x=c(0,0,0.656),y=c(0,100,100)) 
+trinf <- data.frame(x=c(0,0.656,0.656),y=c(0,0,100))
+
+c("More than proportional decrease in efficacy", "Less than proportional decrease in efficacy")
+
+# Use geom_polygon for coloring the two areas
+p_base <- ggplot(data=output_base, aes(x=domusage, y=relchange)) +
+  geom_polygon(aes(x=x, y=y), data=trsup, fill="#00FF0066") +
+  geom_polygon(aes(x=x, y=y), data=trinf, fill= "#FF000066") +
+  geom_abline(intercept = 0, slope = 100/0.656, size = 3) +
+  geom_line(color = "red", size = 1.5, lty = 3) + theme_bw() +
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  labs(x ="Proportion of Food From Domestic Origins", y = "Reduction in the Efficacy of Livestock Antibiotic Stewardship", 
+       color = "Density") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm'))  + 
+  geom_line(data = data_base, aes(x = domusage, y = relchange ), color = "red", size = 1.5, lty = 3, inherit.aes = F) +
+  annotate("text", x = c(0.15, 0.5), y = c(75, 25), label = c('atop("Less than proportional \n decrease in efficacy", bold("(less impact)"))',
+                                                               'atop("More than proportional \n decrease in efficacy", bold("(greater impact)"))'),
+           size = 4, col = "black", parse = TRUE)
+
+ggsave(p_base, filename = paste0("base_plot_import.png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
