@@ -175,16 +175,41 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
          IshH = 0, IrhH = 0)
 
 times <- seq(0, 10000, by = 100) 
-res <- c(0.25, 0.5, 0.75)
 
 attr_anal <- expand.grid("nEU_contam_vec" = seq(0, 1, by = 0.01), "nEU_usage_vec" = seq(0, 1, by = 0.01))
 
-grep("fracimp",names(parms), value = TRUE)
+output1 <- data.frame(matrix(ncol = 5, nrow = nrow(attr_anal)))
 
 for(i in 1:nrow(attr_anal)) {
+  parms1 <- parms
+  
+  #Usage
+  #This is all of the EU imports normalised to 1 
+  sum_100_norm <- (parms[grep("fracimp",names(parms), value = TRUE)[1:9]] / (sum(parms[grep("fracimp",names(parms), value = TRUE)[1:9]])))
   parms1["fracimp_nEU"] <- attr_anal[i,2]
+  parms1[grep("fracimp",names(parms), value = TRUE)[1:9]] <-  sum_100_norm * (1-parms1["fracimp_nEU"])
   
-  
+  #Imports
   parms1["imp_nEU"] <- attr_anal[i,1]
   
+  #Resistance
+  parms1["propres_impnEU"] = c(0.25, 0.5, 0.75)[1]
+ 
+  #Run the model
+  out <- ode(y = init, func = amrimp, times = times, parms = parms1)
+  
+  temp <- c(out[nrow(out),27]/sum(out[nrow(out),seq(7, 29, by = 2)]),
+            sum(out[nrow(out),26:27])/sum(out[nrow(out),seq(6, 29, by = 1)]),
+            parms1["fracimp_nEU"],
+            parms1["imp_nEU"],
+            parms1["propres_impnEU"]) 
+  
+  print(paste0((i / nrow(attr_anal))*100))
+  output1[i,] <- temp
 }
+
+colnames(output1)[1:5] <- c("PropRes_NonEU", "TotInf_NonEU", "fracimp_nEU", "imp_nEU", "propres_impnEU")
+
+# Plotting Heat Map -------------------------------------------------------
+
+
