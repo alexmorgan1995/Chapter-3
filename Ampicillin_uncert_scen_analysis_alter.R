@@ -428,12 +428,13 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
          IshA9 = 0,IrhA9 = 0,
          IshAnEU = 0,IrhAnEU = 0,
          IshH = 0, IrhH = 0)
-times <- seq(0, 10000, by = 100) 
+times <- seq(0, 10000, by = 10) 
 
 #Generate 5 Parm Sets - Baseline, Usage amongst Imports,  Contamination, Resistance, All 
 
 parms_base <- parms
 
+#Varying all of them using runif 
 amp_cont_data <- data.frame(matrix(runif(1000, 0 , 1), nrow = 1000, ncol = 10)); colnames(amp_cont_data) <- grep("fracimp", names(parms_base), value=TRUE)
 amp_res_data <- data.frame(matrix(runif(1000, 0 , 1), nrow = 1000, ncol = 10)); colnames(amp_res_data) <- grep("propres_imp", names(parms_base), value=TRUE)
 t_data <- RandVec(a=0, b=1, s=1, n=10, m=1000, Seed=sample(1:1000, size = 1))
@@ -441,6 +442,21 @@ imp_usage_data <- data.frame(matrix(unlist(t_data), nrow=1000, byrow=TRUE), stri
 comb_data <- cbind(amp_cont_data, amp_res_data, imp_usage_data) 
 
 data_list <- list(amp_cont_data, amp_res_data, imp_usage_data, comb_data)
+
+#Varying them all together percentiles 
+
+amp_cont_data <- data.frame(matrix(NA, ncol = 10, nrow = 0))
+amp_res_data <- data.frame(matrix(NA, ncol = 10, nrow = 0))
+
+for(i in 1:11) {
+  temp <- rep(c(seq(0,1, by = 0.1))[i], 10)
+  amp_cont_data <- rbind(amp_cont_data, temp)
+  amp_res_data <- rbind(amp_res_data, temp)
+  colnames(amp_cont_data) <- grep("fracimp", names(parms_base), value=TRUE)
+  colnames(amp_res_data) <- grep("propres_imp", names(parms_base), value=TRUE)
+}
+
+data_list_perc <- list(amp_cont_data, amp_res_data, imp_usage_data, comb_data)
 
 usage_threshold <- c(seq(0, 0.656, by = 0.02), 0.656)
 
@@ -491,7 +507,7 @@ for(j in 1:5){
       
     } else {
       output <- list()
-      parms_list <- data_list[[j-1]]
+      parms_list <- data_list_perc[[j-1]]
       parms <- parms_base
       
       for(i in 1:nrow(parms_list)) {
@@ -504,6 +520,25 @@ for(j in 1:5){
     return(output)
   })
 }
+
+#Plotting Contamination and Resistance 
+
+data_base <- data_imp_list[[1]]
+cont_minmax_data <- as.data.frame(cbind(sapply(data_imp_list[[2]], "[[", 1))); colnames(cont_minmax_data) <- sapply(0:10, function(x) paste0(x,"0%"))
+cont_minmax_data$usage <- usage_threshold
+cont_plots <- melt(cont_minmax_data, measure.vars = c(colnames(cont_minmax_data)[1:11]), id.vars = c("usage"))
+
+ggplot(cont_plots, mapping = aes(x = usage, y = value, col = variable)) + geom_line() + 
+  geom_line(data_base, mapping = aes(x = domusage, y = relchange), inherit.aes = TRUE) + theme_bw() +  
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  labs(x ="Proportion of Food From Domestic Origins", y = "Relative Reduction in the Efficacy of Livestock Antibiotic Curtailment on Resistance") +
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm'))
+
+
+
+
 
 #Plotting Output 
 
