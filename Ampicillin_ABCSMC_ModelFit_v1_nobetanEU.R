@@ -215,22 +215,21 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.075)
-        d_phi <- runif(1, min = 0, max = 0.75)
-        d_kappa <- runif(1, min = 0, max = 350)
+        d_betaAA <- runif(1, min = 0, max = 0.1)
+        d_phi <- runif(1, min = 0, max = 1.5)
+        d_kappa <- runif(1, min = 0, max = 650)
         d_alpha <- rbeta(1, 1.5, 8.5)
-        d_zeta <- runif(1, 0, 0.003)
+        d_zeta <- runif(1, 0, 0.0035)
         
-        d_betaHD <- runif(1, 0, 0.003)
-        d_betaHH <- runif(1, 0, 0.03)
-        d_betaHI_EU <- runif(1, 0, 0.0005)
+        d_betaHD <- runif(1, 0, 0.0035)
+        d_betaHH <- runif(1, 0, 0.05)
+        d_betaHI_EU <- runif(1, 0, 0.0004)
         d_imp_nEU <- runif(1, 0, 1)
         d_propres_impnEU <- runif(1, 0, 1)
         
       } else{ 
         p <- sample(seq(1,N),1,prob = w.old) # check w.old here
         par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp, algorithm = "gibbs")
-        print(par)
         d_betaAA<-par[1]
         d_phi<-par[2]
         d_kappa<-par[3]
@@ -310,10 +309,9 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 }
 
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
-1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"]))
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.075, 0.75, 350, 1, 0.003, 0.003, 0.03, 0.0005, 1, 1)
+lm.upp <- c(0.1, 1.5, 650, 1, 0.0035, 0.0035, 0.05, 0.0004, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=10,nrow=N)
