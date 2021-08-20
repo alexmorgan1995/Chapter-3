@@ -56,8 +56,8 @@ amrimp <- function(t, y, parms) {
       (1-psi)*(imp9)*(betaHI_EU*fracimp9*(1-propres_imp9)*Sh) - 
       (1-psi)*(imp9)*(1-alpha)*(betaHI_EU*fracimp9*propres_imp9*Sh) - 
       
-      (1-psi)*(imp_nEU)*(betaHI_nEU*fracimp_nEU*(1-propres_impnEU)*Sh) - 
-      (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_nEU*fracimp_nEU*propres_impnEU*Sh)
+      (1-psi)*(imp_nEU)*(betaHI_EU*fracimp_nEU*(1-propres_impnEU)*Sh) - 
+      (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_EU*fracimp_nEU*propres_impnEU*Sh)
     
     dIshDA = psi*betaHD*Isa*Sh  - rh*IshDA - uh*IshDA 
     dIrhDA = psi*(1-alpha)*betaHD*Ira*Sh - rh*IrhDA - uh*IrhDA  
@@ -89,8 +89,8 @@ amrimp <- function(t, y, parms) {
     dIshA9 = (1-psi)*(imp9)*(betaHI_EU*fracimp9*(1-propres_imp9)*Sh) - rh*IshA9 - uh*IshA9 
     dIrhA9 = (1-psi)*(imp9)*(1-alpha)*(betaHI_EU*fracimp9*propres_imp9*Sh) - rh*IrhA9 - uh*IrhA9  
     
-    dIshAnEU = (1-psi)*(imp_nEU)*(betaHI_nEU*fracimp_nEU*(1-propres_impnEU)*Sh) - rh*IshAnEU - uh*IshAnEU 
-    dIrhAnEU = (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_nEU*fracimp_nEU*propres_impnEU*Sh) - rh*IrhAnEU - uh*IrhAnEU  
+    dIshAnEU = (1-psi)*(imp_nEU)*(betaHI_EU*fracimp_nEU*(1-propres_impnEU)*Sh) - rh*IshAnEU - uh*IshAnEU 
+    dIrhAnEU = (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_EU*fracimp_nEU*propres_impnEU*Sh) - rh*IrhAnEU - uh*IrhAnEU  
     
     dIshH = betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshA4+IshA5+IshA6+IshA7+IshA8+IshA9+IshAnEU+IshH) - rh*IshH - uh*IshH 
     dIrhH = (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhA4+IrhA5+IrhA6+IrhA7+IrhA8+IrhA9+IrhAnEU+IrhH)- rh*IrhH - uh*IrhH 
@@ -130,15 +130,17 @@ plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp, ylim = c(0
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-amp_post <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[1:6], 1))
+#amp_post <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[1:6], 1))
+amp_post <- read.csv(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[2])
 
 MAP_parms <- data.frame("parms" = colnames(amp_post), "mean" = colMeans(amp_post))
 
 parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi = 0.656,
           
-          fracimp1 = country_data_imp[2,"Corrected_Usage_18"], fracimp2 = country_data_imp[3,"Corrected_Usage_18"], fracimp3 = country_data_imp[4,"Corrected_Usage_18"], fracimp4 = country_data_imp[5,"Corrected_Usage_18"], 
-          fracimp5 = country_data_imp[6,"Corrected_Usage_18"], fracimp6 = country_data_imp[7,"Corrected_Usage_18"], fracimp7 = country_data_imp[8,"Corrected_Usage_18"], fracimp8 = country_data_imp[9,"Corrected_Usage_18"], 
-          fracimp9 = country_data_imp[10,"Corrected_Usage_18"], fracimp_nEU = 1 - sum(country_data_imp[1:10,"Corrected_Usage_18"]),
+          fracimp1 = as.numeric(country_data_imp[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(country_data_imp[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(country_data_imp[4,"Normalised_Usage_2018"]), 
+          fracimp4 = as.numeric(country_data_imp[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(country_data_imp[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(country_data_imp[7,"Normalised_Usage_2018"]), 
+          fracimp7 = as.numeric(country_data_imp[8,"Normalised_Usage_2018"]), fracimp8 = as.numeric(country_data_imp[9,"Normalised_Usage_2018"]), 
+          fracimp9 = as.numeric(country_data_imp[10,"Normalised_Usage_2018"]), fracimp_nEU = 1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"])),
           
           imp1 = country_data_imp[2,"Foodborne_Carriage_2019"], imp2 = country_data_imp[3,"Foodborne_Carriage_2019"], imp3 = country_data_imp[4,"Foodborne_Carriage_2019"], imp4 = country_data_imp[5,"Foodborne_Carriage_2019"], 
           imp5 = country_data_imp[6,"Foodborne_Carriage_2019"], imp6 = country_data_imp[7,"Foodborne_Carriage_2019"], imp7 = country_data_imp[8,"Foodborne_Carriage_2019"], imp8 = country_data_imp[9,"Foodborne_Carriage_2019"],
@@ -150,7 +152,7 @@ parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi = 
           
           
           betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = MAP_parms[which(MAP_parms == "betaHH"),2], betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
-          betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2], betaHI_nEU = MAP_parms[which(MAP_parms == "betaHI_nEU"),2], 
+          betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2],
           
           imp_nEU =  MAP_parms[which(MAP_parms == "imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "propres_impnEU"),2],
           phi =  MAP_parms[which(MAP_parms == "phi"),2], kappa =  MAP_parms[which(MAP_parms == "kappa"),2], alpha =  MAP_parms[which(MAP_parms == "alpha"),2], 
@@ -204,12 +206,26 @@ for(i in 1:nrow(attr_anal)) {
             parms1["imp_nEU"],
             parms1["propres_impnEU"]) 
   
-  print(paste0((i / nrow(attr_anal))*100))
+  print(paste0("Progress - ", round((i / nrow(attr_anal)), 4)*100, "%"))
   output1[i,] <- temp
 }
 
 colnames(output1)[1:5] <- c("PropRes_NonEU", "TotInf_NonEU", "fracimp_nEU", "imp_nEU", "propres_impnEU")
 
 # Plotting Heat Map -------------------------------------------------------
+
+breaks1 <- seq(0,1, by = 0.1)
+
+plot1 <- ggplot(output1, aes(fracimp_nEU, imp_nEU, z = PropRes_NonEU)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
+  labs(x = bquote("FracImp"["nEU"]), y = bquote("IMP"["nEU"]), fill = bquote("Attributable PropRes"["nEU"]), title = c(0.25, 0.5, 0.75)[1]) +
+  metR::geom_text_contour(col = "white", nudge_y = -0.4, fontface = "bold", size = 5, breaks = breaks1, label.placement = label_placement_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black",) +
+  scale_fill_viridis_b(breaks = breaks1, direction = -1, begin = 0, end = 0.9, values = c(0, 1)) +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  theme(legend.position = "right", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+        axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
+        plot.title = element_text(size = 18, vjust = 3, hjust = 0.1, face = "bold"),
+        legend.spacing.x = unit(0.3, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.75, "cm"),
+        legend.key.width =  unit(2, "cm"))
 
 
