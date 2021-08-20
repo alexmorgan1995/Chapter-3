@@ -277,6 +277,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
           # Store results
           res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_imp_nEU, d_propres_impnEU) 
           dist_data[i,] <- dist
+          print(res.new[i,])
           
           # Calculate weights
           if(g==1){
