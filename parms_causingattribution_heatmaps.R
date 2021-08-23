@@ -1,4 +1,4 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity"); library("metR")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("viridis")
 
 rm(list=ls())
@@ -23,8 +23,8 @@ amrimp <- function(t, y, parms) {
     
     dSh = uh + rh*(1-Sh) - uh*Sh - 
       
-      betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshH) - 
-      (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhH) - 
+      betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshA4+IshA5+IshA6+IshA7+IshA8+IshA9+IshAnEU+IshH) - 
+      (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhA4+IrhA5+IrhA6+IrhA7+IrhA8+IrhA9+IrhAnEU+IrhH) - 
       
       psi*(betaHD*Isa*Sh) - 
       psi*(1-alpha)*(betaHD*Ira*Sh) - 
@@ -214,18 +214,38 @@ colnames(output1)[1:5] <- c("PropRes_NonEU", "TotInf_NonEU", "fracimp_nEU", "imp
 
 # Plotting Heat Map -------------------------------------------------------
 
-breaks1 <- seq(0,1, by = 0.1)
-
-plot1 <- ggplot(output1, aes(fracimp_nEU, imp_nEU, z = PropRes_NonEU)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
-  labs(x = bquote("FracImp"["nEU"]), y = bquote("IMP"["nEU"]), fill = bquote("Attributable PropRes"["nEU"]), title = c(0.25, 0.5, 0.75)[1]) +
-  metR::geom_text_contour(col = "white", nudge_y = -0.4, fontface = "bold", size = 5, breaks = breaks1, label.placement = label_placement_fraction(frac = 0.5),
+breaks_res <- seq(0,1, by = 0.1)
+#Attributable Resistance
+p_res <- ggplot(output1, aes(fracimp_nEU, imp_nEU, z = PropRes_NonEU)) + metR::geom_contour_fill(breaks = breaks_res, color = "black", size = 0.1)  + 
+  labs(x = "Relative Proportion of Imports from non-EU Origins", y = "Fraction of non-EU Imports Contaminated", 
+       fill = "Attributable Resistance  \n from non-EU Origins", title = "") +
+  metR::geom_text_contour(col = "white", nudge_y = 0, fontface = "bold", size = 5, breaks = breaks_res, label.placement = label_placement_fraction(frac = 0.5),
                           stroke = 0.05, stroke.color = "black",) +
-  scale_fill_viridis_b(breaks = breaks1, direction = -1, begin = 0, end = 0.9, values = c(0, 1)) +
+  scale_fill_viridis_b(breaks = breaks_res, direction = -1, begin = 0, end = 0.9, values = c(0, 1)) +
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
-  theme(legend.position = "right", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+  theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
         axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
         plot.title = element_text(size = 18, vjust = 3, hjust = 0.1, face = "bold"),
         legend.spacing.x = unit(0.3, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.75, "cm"),
         legend.key.width =  unit(2, "cm"))
 
+ggsave(p_res, filename = paste0("import_attr_res.png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+
+#Attributable Contamination
+
+breaks_cont <- seq(0,0.2, by = 0.01)
+
+p_cont <- ggplot(output1, aes(fracimp_nEU, imp_nEU, z = TotInf_NonEU)) + metR::geom_contour_fill(breaks = breaks_cont, color = "black", size = 0.1)  + 
+  labs(x = "Relative Proportion of Imports from non-EU Origins", y = "Fraction of non-EU Imports Contaminated", 
+       fill = "Attributable Contamination  \n from non-EU Origins", title = "") +
+  metR::geom_text_contour(col = "white", nudge_y = 0, fontface = "bold", size = 5, breaks = breaks_cont, label.placement = label_placement_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black",) +
+  scale_fill_viridis_b(breaks = breaks_cont, direction = -1, begin = 0, end = 0.9, values = c(0, 1)) +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+        axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
+        plot.title = element_text(size = 18, vjust = 3, hjust = 0.1, face = "bold"),
+        legend.spacing.x = unit(0.3, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.75, "cm"),
+        legend.key.width =  unit(2, "cm"))
 
