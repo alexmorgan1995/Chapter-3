@@ -215,15 +215,15 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.2)
-        d_phi <- runif(1, min = 0, max = 3)
-        d_kappa <- runif(1, min = 0, max = 1000)
+        d_betaAA <- runif(1, min = 0, max = 1)
+        d_phi <- runif(1, min = 0, max = 50)
+        d_kappa <- runif(1, min = 0, max = 1500)
         d_alpha <- rbeta(1, 1.5, 8.5)
-        d_zeta <- runif(1, 0, 0.004)
+        d_zeta <- runif(1, 0, 0.0045)
         
-        d_betaHD <- runif(1, 0, 0.004)
-        d_betaHH <- runif(1, 0, 0.1)
-        d_betaHI_EU <- runif(1, 0, 0.0004)
+        d_betaHD <- runif(1, 0, 0.0045)
+        d_betaHH <- runif(1, 0, 0.2)
+        d_betaHI_EU <- runif(1, 0, 0.00045)
         d_imp_nEU <- runif(1, 0, 1)
         d_propres_impnEU <- runif(1, 0, 1)
         
@@ -312,7 +312,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.2, 3, 1000, 1, 0.004, 0.004, 0.1, 0.0004, 1, 1)
+lm.upp <- c(1, 50, 1500, 1, 0.0045, 0.0045, 0.2, 0.00045, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=10,nrow=N)
