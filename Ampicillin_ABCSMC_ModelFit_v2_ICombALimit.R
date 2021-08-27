@@ -147,11 +147,11 @@ sum_square_diff_dist <- function(sum.stats, data.obs, model.obs) {
 }
 
 computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data) {
-  tauoutput <- matrix(nrow = 0, ncol = 5)
-  tau_range <- c(tau_range, UK_amp)
-  
+  tau_range <- c(0, tau_range, UK_amp)
+  tauoutput <- matrix(nrow = length(tau_range), ncol = 6)
+   
   for (i in 1:length(tau_range)) {
-    temp <- matrix(NA, nrow = 1, ncol = 5)
+    temp <- matrix(NA, nrow = 1, ncol = 6)
     
     parms2 = c(ra = thetaparm[["ra"]], rh = thetaparm[["rh"]], ua = thetaparm[["ua"]], uh = thetaparm[["uh"]], tau = tau_range[i], psi = thetaparm[["psi"]],
                
@@ -180,10 +180,10 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
     temp[1,3] <- (sum(out[nrow(out),seq(6, 29)]))*100000
     temp[1,4] <- out[nrow(out),"Ira"]/ (out[nrow(out),"Isa"] + out[nrow(out),"Ira"])
     temp[1,5] <- sum(out[nrow(out),seq(7, 29, by =2)]) /  sum(out[nrow(out),seq(6, 29)])
-    tauoutput <- rbind(tauoutput, temp)
+    tauoutput[i,] <- temp
   }
   tauoutput <- data.frame(tauoutput)
-  colnames(tauoutput) <- c("tau",  "ICombA", "ICombH",  "propres_amp", "ResPropHum") 
+  colnames(tauoutput) <- c("tau",  "ICombA", "ICombH","propres_amp", "ResPropHum") 
   
   
   return(c(distanceABC(list(sum.stats), data, 
@@ -191,6 +191,7 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
            abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
            abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
            abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
+           abs(tauoutput$ICombA[tauoutput$tau == 0]),
            abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111)))
 }
 
@@ -199,7 +200,7 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
 start_time <- Sys.time()
 
 #Where G is the number of generations
-prior.non.zero<-function(par){
+prior.non.zero <- function(par){
   prod(sapply(1:10, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
@@ -215,9 +216,9 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 20)
-        d_phi <- runif(1, min = 0, max = 200)
-        d_kappa <- runif(1, min = 0, max = 100000)
+        d_betaAA <- runif(1, min = 0, max = 2)
+        d_phi <- runif(1, min = 0, max = 40)
+        d_kappa <- runif(1, min = 0, max = 5000)
         d_alpha <- rbeta(1, 1.5, 8.5)
         d_zeta <- runif(1, 0, 0.005)
         
@@ -272,7 +273,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         print(dist)
         
         if((dist[1] <= epsilon_dist[g]) && (dist[2] <= epsilon_foodH[g]) && (dist[3] <= epsilon_AMRH[g]) && 
-           (dist[4] <= epsilon_foodA[g]) && (dist[5] <= epsilon_AMRA[g]) && (!is.na(dist))) {
+           (dist[4] <= epsilon_foodA[g]) && (dist[5] < 0.95) && (dist[6] <= epsilon_AMRA[g]) && (!is.na(dist))) {
           
           # Store results
           res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_imp_nEU, d_propres_impnEU) 
@@ -303,7 +304,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
     print(res.old)
     w.old <- w.new/sum(w.new)
     colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH","betaHI_EU", "imp_nEU", "propres_impnEU")
-    write.csv(res.new, file = paste("complexmodel_ABC_SMC_gen_amp_",g,".csv",sep=""), row.names=FALSE)
+    write.csv(res.new, file = paste("ICOMBHTEST",g,".csv",sep=""), row.names=FALSE)
     ####
   }
   return(N_ITER_list)
@@ -312,7 +313,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(20, 200, 100000, 1, 0.005, 0.005, 0.2, 0.0004, 1, 1)
+lm.upp <- c(2, 50, 5000, 1, 0.005, 0.005, 0.2, 0.0004, 1, 1)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=10,nrow=N)

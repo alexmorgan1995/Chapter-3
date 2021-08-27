@@ -173,9 +173,10 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
 times <- seq(0,30000, by = 100) 
 parmtau1 <- c(0,UK_amp)
 
-# Run the Analysis  -------------------------------------------------------
 
-parms_list <- list("BetaAA" = runif(100, min = 0, max = 0.2),
+# Sensitivity Analysis of Parameter on Relative Increase in ICombH --------
+
+parms_list <- list("betaAA" = runif(100, min = 0, max = 0.2),
                    "phi" = runif(100, min = 0, max = 3),
                    "kappa" = runif(100, min = 0, max = 1000),
                    "alpha" = rbeta(100, 1.5, 8.5),
@@ -219,7 +220,7 @@ for(j in 1:length(names(parms_list))){
   })
 }
 
-# Violin Plots ------------------------------------------------------------
+#Plot the Output
 
 comb_data <- do.call("rbind", icomb_uncert)
 comb_data$relICombH <- as.numeric(comb_data$relICombH)
@@ -231,10 +232,124 @@ parm_viol_plot <- ggplot(comb_data, aes(x=Parameter, y=as.numeric(relICombH), fi
   labs(title="", 
        x="Parameters", y = "Relative Change in Human Foodborne Disease") +
   theme_classic() + scale_fill_brewer(palette="Spectral") + 
-  scale_x_discrete(labels=c(names(parms_list))) + 
   theme(legend.position= "none", legend.text=element_text(size=12), legend.title =element_text(size=14), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) 
 
 
 #  geom_hline(yintercept = base_change, size = 1.2, col = "red", lty = 2) +
+
+# Sensitivity Analysis of Parameter on Total Increase in IcombH upon Curtailment --------
+
+parms_list <- list("betaAA" = runif(100, min = 0, max = 0.2),
+                   "phi" = runif(100, min = 0, max = 3),
+                   "kappa" = runif(100, min = 0, max = 1000),
+                   "alpha" = rbeta(100, 1.5, 8.5),
+                   "zeta" = runif(100, 0, 0.004),
+                   "betaHD" = runif(100, 0, 0.004),
+                   "betaHH" = runif(100, 0, 0.1),
+                   "betaHI_EU" = runif(100, 0, 0.0004))
+
+icomb_uncert <- list()
+
+for(j in 1:length(names(parms_list))){
+  
+  
+  icomb_uncert[[j]] <- local ({
+    
+    usage_frame_1 <- data.frame(matrix(nrow = 100, ncol = 2))
+    
+    for(x in 1:length(parms_list[[j]])) {
+      dump_data <- vector() 
+      parms2 <- parms
+      parms2[names(parms_list)[j]] <- parms_list[[j]][[x]]
+      parms2["tau"] <- 0
+      
+      out <- ode(y = init, func = amrimp, times = times, parms = parms2)
+      
+      dump_data[1] <- sum(out[nrow(out),6:29])
+      dump_data[2] <- names(parms_list)[j]
+      usage_frame_1[x,] <-  dump_data
+      
+      print(paste0("Parameter Set ", names(parms_list)[j]," - ", round(x/length(parms_list[[j]]), digits = 4)*100, "%"))
+    }
+    colnames(usage_frame_1) <- c("relICombH", "Parameter")
+    return(usage_frame_1)
+  })
+}
+
+comb_data <- do.call("rbind", icomb_uncert)
+comb_data$relICombH <- as.numeric(comb_data$relICombH)
+
+comb_data$Parameter <- as.factor(comb_data$Parameter)
+
+parm_viol_plot <- ggplot(comb_data, aes(x=Parameter, y=as.numeric(relICombH), fill=Parameter)) + theme_bw() +
+  geom_violin(trim=TRUE) + geom_boxplot(width=0.1, fill="white") +
+  labs(title="", 
+       x="Parameters", y = "Relative Change in Human Foodborne Disease") +
+  theme_classic() + scale_fill_brewer(palette="Spectral")  + 
+  theme(legend.position= "none", legend.text=element_text(size=12), legend.title =element_text(size=14), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm')) 
+
+# Incremental Increase in Kappa on ICombH at tau = 0  ---------------------
+
+kappa_inc <- seq(0, 10000, 1)
+
+icomb_incr <- data.frame(matrix(ncol = 2, nrow = length(kappa_inc)))
+
+parms2 <- parms
+
+for(i in 1:length(kappa_inc)){
+      dump_data <- vector() 
+      parms2["kappa"] <- kappa_inc[i]
+      parms2["tau"] <- 0
+      
+      out <- ode(y = init, func = amrimp, times = times, parms = parms2)
+      
+      dump_data[1] <- sum(out[nrow(out),6:29])
+      dump_data[2] <- kappa_inc[i]
+      print(dump_data)
+      
+      icomb_incr[i,] <-  dump_data
+      
+      print(i/length(kappa_inc))
+}
+
+colnames(icomb_incr) <- c("ICombH", "Kappa")
+
+#Plot the Incremental Increase 
+
+ggplot(icomb_incr, aes(x = Kappa, y = ICombH)) + geom_line()
+
+# Incremental Increase in BetaAA on ICombH at tau = 0  ---------------------
+
+beta_inc <- seq(0, 5, 0.1)
+
+icomb_incr <- data.frame(matrix(ncol = 3, nrow = length(beta_inc)))
+
+parms2 <- parms
+
+for(i in 1:length(beta_inc)){
+  dump_data <- vector() 
+  parms2["betaAA"] <- beta_inc[i]
+  parms2["tau"] <- 0
+  
+  out <- ode(y = init, func = amrimp, times = times, parms = parms2)
+  
+  dump_data[1] <- sum(out[nrow(out),6:29])
+  dump_data[2] <- sum(out[nrow(out),3:4])
+  dump_data[3] <- beta_inc[i]
+  print(dump_data)
+  
+  icomb_incr[i,] <-  dump_data
+  
+  print(i/length(beta_inc))
+}
+
+colnames(icomb_incr) <- c("ICombH","ICombA", "BetaAA")
+
+#Plot the Incremental Increase 
+
+ggplot(icomb_incr, aes(x = BetaAA, y = ICombH)) + geom_line()
+ggplot(icomb_incr, aes(x = BetaAA, y = ICombA)) + geom_line()
