@@ -148,10 +148,10 @@ sum_square_diff_dist <- function(sum.stats, data.obs, model.obs) {
 
 computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data) {
   tau_range <- c(0, tau_range, UK_amp)
-  tauoutput <- matrix(nrow = length(tau_range), ncol = 6)
+  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
    
   for (i in 1:length(tau_range)) {
-    temp <- matrix(NA, nrow = 1, ncol = 6)
+    temp <- matrix(NA, nrow = 1, ncol = 5)
     
     parms2 = c(ra = thetaparm[["ra"]], rh = thetaparm[["rh"]], ua = thetaparm[["ua"]], uh = thetaparm[["uh"]], tau = tau_range[i], psi = thetaparm[["psi"]],
                
@@ -183,11 +183,14 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
     tauoutput[i,] <- temp
   }
   tauoutput <- data.frame(tauoutput)
-  colnames(tauoutput) <- c("tau",  "ICombA", "ICombH","propres_amp", "ResPropHum") 
+
   
+  colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
+  
+  test <<- tauoutput
   
   return(c(distanceABC(list(sum.stats), data, 
-                       tauoutput[!tauoutput$tau == UK_amp,]),
+                       tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
            abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
            abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
            abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
@@ -209,7 +212,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
   N_ITER_list <- list()
   for(g in 1:G) {
     i <- 1
-    dist_data <- data.frame(matrix(nrow = 1000, ncol = 5))
+    dist_data <- data.frame(matrix(nrow = 1000, ncol = 6))
     N_ITER <- 1
     
     while(i <= N) {
