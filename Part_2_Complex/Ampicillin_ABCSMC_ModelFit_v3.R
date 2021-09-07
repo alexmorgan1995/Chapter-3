@@ -359,7 +359,7 @@ dist_save <- ABC_algorithm(N = 1000,
 
 end_time <- Sys.time(); end_time - start_time
 
-saveRDS(dist_save, file = "dist_amp_list.rds")
+saveRDS(dist_save, file = "dist_compamp_list.rds")
 
 # Assess Posterior --------------------------------------------------------
 

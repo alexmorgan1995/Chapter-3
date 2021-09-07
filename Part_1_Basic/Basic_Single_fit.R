@@ -133,15 +133,15 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
       
       N_ITER <- N_ITER + 1
       if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.05)
+        d_betaAA <- runif(1, min = 0, max = 0.035)
         d_phi <- runif(1, min = 0, max = 0.1)
-        d_kappa <- runif(1, min = 0, max = 5)
+        d_kappa <- runif(1, min = 0, max = 10)
         d_alpha <- rbeta(1, 1.5, 8.5)
         d_zeta <- runif(1, 0, 0.005)
         
-        d_betaHD <- runif(1, 0, 0.0005)
-        d_betaHH <- runif(1, 0, 0.0005)
-        d_betaHI <- runif(1, 0, 0.0001)
+        d_betaHD <- runif(1, 0, 0.001)
+        d_betaHH <- runif(1, 0, 0.002)
+        d_betaHI <- runif(1, 0, 0.0002)
         
       } else{ 
         p <- sample(seq(1,N),1,prob = w.old) # check w.old here
@@ -216,7 +216,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
 N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.05, 0.1, 5, 1, 0.005, 0.0005, 0.0005, 0.0001)
+lm.upp <- c(0.035, 0.1, 10, 1, 0.005, 0.001, 0.002, 0.0002)
 
 # Empty matrices to store results (5 model parameters)
 res.old<-matrix(ncol=8,nrow=N)
@@ -248,15 +248,31 @@ end_time <- Sys.time(); end_time - start_time
 
 saveRDS(dist_save, file = "dist_simple_amp.rds")
 
-#Check Posterior 
+# Check Posterior ---------------------------------------------------------
 
-data1 <- read.csv(grep("Simple_FIT_AMP",list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data"), value = TRUE)[1])
+amp_post <- do.call(rbind,
+                    lapply(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^Simple_FIT_AMP.*?\\.csv"), read.csv))
+amp_post$gen <- as.vector(sapply(1:6, 
+                                 function(x) rep(paste0("gen_",x), 1000)))
 
-plot(density(data1$betaAA))
-plot(density(data1$phi))
-plot(density(data1$kappa))
-plot(density(data1$alpha))
-plot(density(data1$zeta))
-plot(density(data1$betaHD))
-plot(density(data1$betaHH))
-plot(density(data1$betaHI))
+l_amp_post <- lapply(1:length(colnames(amp_post)[-1]), function(x) melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[x])[,c(1,3)])
+
+names = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
+          expression(paste("Rate of Antibiotic-Resistant to Antibiotic-Sensitive Reversion (", phi, ")")),
+          expression(paste("Efficacy of Antibiotic-Mediated Animal Recovery (", kappa, ")")),
+          expression(paste("Transmission-related Antibiotic Resistant Fitness Cost (", alpha, ")")),
+          expression(paste("Background Infection Rate (", zeta, ")")),
+          expression(paste("Rate of Domestic Animal-to-Human Transmission (", beta[HD], ")")),
+          expression(paste("Rate of Domestic Human-to-Human Transmission (", beta[HH], ")")),
+          expression(paste("Rate of EU Animal-to-Human Transmission (", beta[HI], ")")))
+
+amp_p_list <- list()
+
+for(i in 1:length(names)){ 
+  amp_p_list[[i]] <- ggplot(l_amp_post[[i]], aes(x=value, fill= gen)) + geom_density(alpha=.5) + 
+    scale_x_continuous(expand = c(0, 0), name = names[i]) + 
+    scale_y_continuous(expand = c(0, 0), name = "") +
+    labs(fill = NULL) + scale_fill_discrete(labels = sapply(1:length(unique(amp_post$gen)), function(x) paste0("Generation ", x)))+
+    theme(legend.text=element_text(size=14),  axis.text=element_text(size=14),
+          axis.title.y=element_text(size=14),axis.title.x= element_text(size=14), plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
+}
