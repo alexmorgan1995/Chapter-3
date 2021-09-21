@@ -2,7 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data/prov_data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data/prov_data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data")
 
 #Function to remove negative prevalence values and round large DP numbers
 rounding <- function(x) {
@@ -37,12 +38,12 @@ amrimp <- function(t, y, parms) {
 
 # Data Import -------------------------------------------------------------
 
-country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/FullData_2021_v1_trim.csv") #This is data for pigs 
+country_data_imp <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model Fit Data/FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 
-country_data_gen <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/res_sales_generalfit.csv") #This is data for pigs 
+country_data_gen <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model Fit Data/res_sales_generalfit.csv") #This is data for pigs 
 country_data_gen[,13:14] <- country_data_gen[,13:14]/1000
 
 UK_tet <- country_data_gen$scaled_sales_tet[country_data_gen$Country == "United Kingdom"]
@@ -53,7 +54,6 @@ country_data_gen <- country_data_gen[country_data_gen$num_test_amp >= 10,]
 plot(country_data_gen$scaled_sales_tet, country_data_gen$propres_tet, ylim = c(0,1))
 plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp, ylim = c(0,1))
 
-
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
 EU_cont <- mean(country_data_imp$Foodborne_Carriage_2019[2:10])
@@ -61,8 +61,12 @@ EU_res <- mean(country_data_imp$Prop_Amp_Res [2:10])
 
 # Import Fitted Parameters ------------------------------------------------
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data/prov_data", pattern = "PART1"), 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "PART1")[1:6], 1))
 MAP_amp <- map_estimate(post_amp)
+
+MAP_amp <- data.frame("Parameters" = colnames(post_amp), "MAP_Estimate" = colMeans(post_amp))
+
+
 
 # Run Model --------------------------------------------------------------
 

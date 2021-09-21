@@ -274,3 +274,10 @@ for(i in 1:length(names)){
     theme(legend.text=element_text(size=14),  axis.text=element_text(size=14),
           axis.title.y=element_text(size=14),axis.title.x= element_text(size=14), plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
 }
+
+
+p_comb <- ggarrange(amp_p_list[[1]],amp_p_list[[2]],amp_p_list[[3]],amp_p_list[[4]],
+          amp_p_list[[5]],amp_p_list[[6]],amp_p_list[[7]],amp_p_list[[8]], ncol = 2, nrow = 4)
+
+ggsave(p_comb, filename = "post_simple.png",dpi = 300, type = "cairo", width = 12, height = 12, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
