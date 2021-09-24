@@ -1,8 +1,8 @@
 library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
+library("profvis")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data")
 setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data")
 
 #Function to remove negative prevalence values and round large DP numbers
@@ -10,6 +10,7 @@ rounding <- function(x) {
   if(as.numeric(x) < 1e-10) {x <- 0
   } else{signif(as.numeric(x), digits = 6)}
 }
+
 # Single Model ------------------------------------------------------------
 
 amrimp <- function(t, y, parms) {
@@ -112,8 +113,6 @@ amrimp <- function(t, y, parms) {
   })
 }
 
-
-
 # Data Import -------------------------------------------------------------
 
 country_data_imp <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model Fit Data/FullData_2021_v1_trim.csv") #This is data for pigs 
@@ -132,19 +131,12 @@ country_data_gen <- country_data_gen[country_data_gen$num_test_amp >= 10,]
 plot(country_data_gen$scaled_sales_tet, country_data_gen$propres_tet, ylim = c(0,1))
 plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp, ylim = c(0,1))
 
+amp_post <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/PART2_AMP_modelfit_6.csv")
 
-# Import in Parameters and Set Baseline Parms -----------------------------
-post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "PART2"), 1))
+MAP_parms <- data.frame("Parameter" = colnames(amp_post), 
+                        "MAP_Estimate" = colMeans(amp_post))
 
-MAP_parms <- map_estimate(post_amp)
-MAP_parms <- data.frame("Parameter" = colnames(post_amp), 
-                        "MAP_Estimate" = colMeans(post_amp))
-
-# Baseline Change ---------------------------------------------------------
-
-MAP_parms <- data.frame("parms" = colnames(amp_post), "mean" = colMeans(amp_post))
-
-parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi = 0.656,
+parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1,psi = 0.656,
           
           fracimp1 = as.numeric(country_data_imp[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(country_data_imp[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(country_data_imp[4,"Normalised_Usage_2018"]), 
           fracimp4 = as.numeric(country_data_imp[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(country_data_imp[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(country_data_imp[7,"Normalised_Usage_2018"]), 
@@ -166,147 +158,184 @@ parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi =
           phi =  MAP_parms[which(MAP_parms == "phi"),2], kappa =  MAP_parms[which(MAP_parms == "kappa"),2], alpha =  MAP_parms[which(MAP_parms == "alpha"),2], 
           zeta =  MAP_parms[which(MAP_parms == "zeta"),2])
 
-init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
-         Sh = 1,
-         IshDA = 0,IrhDA = 0,
-         IshA1 = 0,IrhA1 = 0,
-         IshA2 = 0,IrhA2 = 0,
-         IshA3 = 0,IrhA3 = 0,
-         IshA4 = 0,IrhA4 = 0,
-         IshA5 = 0,IrhA5 = 0,
-         IshA6 = 0,IrhA6 = 0,
-         IshA7 = 0,IrhA7 = 0,
-         IshA8 = 0,IrhA8 = 0,
-         IshA9 = 0,IrhA9 = 0,
-         IshAnEU = 0,IrhAnEU = 0,
-         IshH = 0, IrhH = 0)
+# ABC Functions -----------------------------------------------------------
 
-times <- seq(0,30000, by = 100) 
-parmtau1 <- c(0,UK_amp)
+#### Approximate Bayesian Computation - SMC ####
 
-output_base <-  data.frame(matrix(nrow = 1, ncol =3))
 
-for (i in 1:2) {
-  temp <- data.frame(matrix(nrow = 1, ncol =3))
-  parms2["tau"] <- parmtau1[i]
-  
-  out <- ode(y = init, func = amrimp, times = times, parms = parms2)
-  temp[,1] <- parmtau1[i]
-  temp[,2] <- sum(out[nrow(out),6:29])
-  temp[,3] <- signif(sum(out[nrow(out), seq(7,29,by = 2)])/ temp[,2], digits = 3)
-  output_base[i,] <- temp
+summarystatprev <- function(prev) {
+  return(prev$propres_amp)
 }
-colnames(output_base) <- c("tau", "ICombH","IResRat")
 
-base_change <- (1-(output_base$IResRat[output_base$tau == 0] / output_base$IResRat[output_base$tau == UK_amp]))*100
-
-# Uncertainty Analysis ----------------------------------------------------
-
-init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
-         Sh = 1,
-         IshDA = 0,IrhDA = 0,
-         IshA1 = 0,IrhA1 = 0,
-         IshA2 = 0,IrhA2 = 0,
-         IshA3 = 0,IrhA3 = 0,
-         IshA4 = 0,IrhA4 = 0,
-         IshA5 = 0,IrhA5 = 0,
-         IshA6 = 0,IrhA6 = 0,
-         IshA7 = 0,IrhA7 = 0,
-         IshA8 = 0,IrhA8 = 0,
-         IshA9 = 0,IrhA9 = 0,
-         IshAnEU = 0,IrhAnEU = 0,
-         IshH = 0, IrhH = 0)
-times <- seq(0, 10000, by = 100) 
-
-parms  = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi = 0.656,
-           
-           fracimp1 = as.numeric(country_data_imp[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(country_data_imp[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(country_data_imp[4,"Normalised_Usage_2018"]), 
-           fracimp4 = as.numeric(country_data_imp[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(country_data_imp[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(country_data_imp[7,"Normalised_Usage_2018"]), 
-           fracimp7 = as.numeric(country_data_imp[8,"Normalised_Usage_2018"]), fracimp8 = as.numeric(country_data_imp[9,"Normalised_Usage_2018"]), 
-           fracimp9 = as.numeric(country_data_imp[10,"Normalised_Usage_2018"]), fracimp_nEU = 1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"])),
-           
-           imp1 = country_data_imp[2,"Foodborne_Carriage_2019"], imp2 = country_data_imp[3,"Foodborne_Carriage_2019"], imp3 = country_data_imp[4,"Foodborne_Carriage_2019"], imp4 = country_data_imp[5,"Foodborne_Carriage_2019"], 
-           imp5 = country_data_imp[6,"Foodborne_Carriage_2019"], imp6 = country_data_imp[7,"Foodborne_Carriage_2019"], imp7 = country_data_imp[8,"Foodborne_Carriage_2019"], imp8 = country_data_imp[9,"Foodborne_Carriage_2019"],
-           imp8 = country_data_imp[9,"Foodborne_Carriage_2019"], imp9 = country_data_imp[10,"Foodborne_Carriage_2019"],
-           
-           propres_imp1 = country_data_imp[2,"Prop_Amp_Res"], propres_imp2 = country_data_imp[3,"Prop_Amp_Res"], propres_imp3 = country_data_imp[4,"Prop_Amp_Res"], propres_imp4 = country_data_imp[5,"Prop_Amp_Res"], 
-           propres_imp5 = country_data_imp[6,"Prop_Amp_Res"], propres_imp6 = country_data_imp[7,"Prop_Amp_Res"], propres_imp7 = country_data_imp[8,"Prop_Amp_Res"], propres_imp8 = country_data_imp[9,"Prop_Amp_Res"], 
-           propres_imp9 = country_data_imp[10,"Prop_Amp_Res"],
-           
-           betaAA = MAP_parms[which(MAP_parms == "betaAA"),2], betaHH = MAP_parms[which(MAP_parms == "betaHH"),2], betaHD =  MAP_parms[which(MAP_parms == "betaHD"),2],
-           betaHI_EU =  MAP_parms[which(MAP_parms == "betaHI_EU"),2],
-           
-           imp_nEU =  MAP_parms[which(MAP_parms == "imp_nEU"),2], propres_impnEU =  MAP_parms[which(MAP_parms == "propres_impnEU"),2],
-           phi =  MAP_parms[which(MAP_parms == "phi"),2], kappa =  MAP_parms[which(MAP_parms == "kappa"),2], alpha =  MAP_parms[which(MAP_parms == "alpha"),2], 
-           zeta =  MAP_parms[which(MAP_parms == "zeta"),2])
-
-#Parm Ranges
-#We need to do this for Contamination, Usage, Resistance and All 
-
-amp_cont_data <- data.frame(matrix(runif(1000, 0 , 1), nrow = 1000, ncol = 10)); colnames(amp_cont_data) <- grep("fracimp", names(parms), value=TRUE)
-amp_res_data <- data.frame(matrix(runif(1000, 0 , 1), nrow = 1000, ncol = 10)); colnames(amp_res_data) <- grep("propres_imp", names(parms), value=TRUE)
-t_data <- RandVec(a=0, b=1, s=1, n=10, m=1000, Seed=sample(1:1000, size = 1))
-imp_usage_data <- data.frame(matrix(unlist(t_data), nrow=1000, byrow=TRUE), stringsAsFactors=FALSE); colnames(imp_usage_data) <- c(sapply(1:9, function(x) paste0("imp",x)), "imp_nEU")
-dom_usage_data <- data.frame(matrix(runif(1000, 0 , 1), nrow = 1000, ncol = 1)); colnames(dom_usage_data) <- "psi"
-comb_data <- cbind(amp_cont_data, amp_res_data, imp_usage_data, dom_usage_data) 
-
-data_list <- list(amp_cont_data, amp_res_data, imp_usage_data, dom_usage_data, comb_data)
-
-parmtau1 <- c(0, UK_amp)
-amp_scen <- list()
-
-for(j in 1:length(data_list)){
-  
-  amp_scen[[j]] <- local ({
-    
-    usage_frame_1 <- data.frame(matrix(nrow = nrow(data_list[[j]]), ncol = 2))
-    
-    for(x in 1:nrow(data_list[[j]])) {
-      dump_data <- vector() 
-      parms2 <- parms
-      
-      parms2[names(data_list[[j]])] <- data_list[[j]][x,]
-      output1 <- data.frame(matrix(nrow = 2, ncol = 3))
-      
-      for (i in 1:2) {
-        temp <- data.frame(matrix(nrow = 1, ncol =3))
-        parms2["tau"] <- parmtau1[i]
-        
-        out <- ode(y = init, func = amrimp, times = times, parms = parms2)
-        temp[,1] <- parmtau1[i]
-        temp[,2] <- sum(out[nrow(out),6:29])
-        temp[,3] <- signif(sum(out[nrow(out), seq(7,29,by = 2)])/ temp[,2], digits = 3)
-        output1[i,] <- temp
-      }
-      
-      colnames(output1) <- c("tau", "ICombH","IResRat")
-      dump_data[1] <- (1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp]))*100 #% Reduction
-      dump_data[2] <- paste0("Parm_Set_", c("amp_cont_data", "amp_res_data", "imp_usage_data", "dom_usage_data", "comb_data")[j])
-      usage_frame_1[x,] <- dump_data
-      
-      print(paste0("Parameter Set ", c("amp_cont_data", "amp_res_data", "imp_usage_data", "dom_usage_data", "comb_data")[j]," - ", round(x/nrow(data_list[[j]]), digits = 4)*100, "%"))
-    }
-    colnames(usage_frame_1) <- c("relRes", "Parameter")
-    return(usage_frame_1)
+sum_square_diff_dist <- function(sum.stats, data.obs, model.obs) {
+  sumsquare <- sapply(sum.stats, function(x) {
+    sumsquare <- abs((x(data.obs) - x(model.obs))^2)
   })
+  return(sum(sumsquare))
 }
 
-# Combination Violin Plot ------------------------------------------------
+computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
+  tau_range <- c(0, tau_range, UK_amp)
+  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
+  
+  for (i in 1:length(tau_range)) {
 
-comb_data_scen <- do.call("rbind", amp_scen)
-comb_data_scen$relRes <- as.numeric(comb_data_scen$relRes)
-comb_data_scen$Parameter <- factor(comb_data_scen$Parameter, level = unique(comb_data_scen$Parameter))
+        parms2 = thetaparm
+    parms2["tau"] = tau_range[i]
+    
+    out <- runsteady(y = init.state, func = fitmodel, parms = parms2, times = c(0, Inf))
+    
+    tauoutput[i,] <- c(tau_range[i], 
+                       out[[1]][["Isa"]] + out[[1]][["Ira"]],
+                       sum(out[[1]][c(5:28)])*100000,
+                       out[[1]][["Ira"]]/ (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
+                       sum(out[[1]][seq(6,28, by = 2)]) /  sum(out[[1]][c(5:28)]))
+  }
+  tauoutput <- data.frame(tauoutput)
+  
+  colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
+  
+  return(c(distanceABC(list(sum.stats), data, 
+                       tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
+           abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
+           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
+           abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
+           abs(tauoutput$ICombA[tauoutput$tau == 0]),
+           abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111)))
+}
 
-parm_scen_viol_plot <- ggplot(comb_data_scen, aes(x=Parameter, y=as.numeric(relRes), fill=Parameter)) + theme_bw() +
-  geom_violin(trim=TRUE) + geom_boxplot(width=0.1, fill="white") +
-  geom_hline(yintercept =  base_change, size = 1.2, col = "red", lty = 2) +
-  labs(title="Effect of Import Parameters on Relative Change in Human Resistance Upon Domestic Curtailment", 
-       x="Import Parameters", y = "Relative Change in Human Resistance") +
-  theme_classic() + scale_fill_brewer(palette="Spectral") + 
-  scale_x_discrete(labels=c("Import Contamination", "Import Resistance", "Import Proportion", "Domestic Usage", "All")) + 
-  theme(legend.position= "none", legend.text=element_text(size=12), legend.title =element_text(size=14), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) 
+profvis ({
+  
+  test <- data.frame(matrix(nrow = 10, ncol = 6 )) 
+  
+  for(i in 1:10) {
+    
+    parms["psi"] = seq(0.01,1, by = 0.1)[i]
+    
+    test[i,] <- computeDistanceABC_ALEX(sum.stat = summarystatprev, 
+                                        distanceABC = sum_square_diff_dist, 
+                                        fitmodel = amrimp, 
+                                        tau_range = country_data_gen$scaled_sales_amp, 
+                                        thetaparm = parms,
+                                        init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, 
+                                                       Sh = 1,
+                                                       IshDA = 0,IrhDA = 0,
+                                                       IshA1 = 0,IrhA1 = 0,
+                                                       IshA2 = 0,IrhA2 = 0,
+                                                       IshA3 = 0,IrhA3 = 0,
+                                                       IshA4 = 0,IrhA4 = 0,
+                                                       IshA5 = 0,IrhA5 = 0,
+                                                       IshA6 = 0,IrhA6 = 0,
+                                                       IshA7 = 0,IrhA7 = 0,
+                                                       IshA8 = 0,IrhA8 = 0,
+                                                       IshA9 = 0,IrhA9 = 0,
+                                                       IshAnEU = 0,IrhAnEU = 0,
+                                                       IshH = 0, IrhH = 0), 
+                                        data = country_data_gen)
+    print(test[i,])
+  }
+})
 
-ggsave(parm_scen_viol_plot, filename = "AMP_scen_viol_plot_v1.png", dpi = 300, type = "cairo", width = 10, height = 8, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures")
+
+# Assessing the Loop ------------------------------------------------------
+init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, 
+               Sh = 1,
+               IshDA = 0,IrhDA = 0,
+               IshA1 = 0,IrhA1 = 0,
+               IshA2 = 0,IrhA2 = 0,
+               IshA3 = 0,IrhA3 = 0,
+               IshA4 = 0,IrhA4 = 0,
+               IshA5 = 0,IrhA5 = 0,
+               IshA6 = 0,IrhA6 = 0,
+               IshA7 = 0,IrhA7 = 0,
+               IshA8 = 0,IrhA8 = 0,
+               IshA9 = 0,IrhA9 = 0,
+               IshAnEU = 0,IrhAnEU = 0,
+               IshH = 0, IrhH = 0)
+
+thetaparm = parms
+tau_range = country_data_gen$scaled_sales_amp
+tau_range <- c(0, tau_range, UK_amp)
+
+profvis({
+ 
+  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
+  
+  for (i in 1:length(tau_range)) {
+    
+    parms2 = thetaparm
+    parms2["tau"] = tau_range[i]
+    
+    out <- stode(y = init.state, func = amrimp, parms = parms2)
+    #out <- runsteady(y = init.state, func = amrimp, parms = parms2, times = c(0, Inf))
+    
+    tauoutput[i,] <- c(tau_range[i], 
+                       out[[1]][["Isa"]] + out[[1]][["Ira"]],
+                       sum(out[[1]][c(5:28)])*100000,
+                       out[[1]][["Ira"]]/ (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
+                       sum(out[[1]][seq(6,28, by = 2)]) /  sum(out[[1]][c(5:28)]))
+  }
+  
+  tauoutput <- data.frame(tauoutput)
+  colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
+  
+  t <- c(sum_square_diff_dist(list(summarystatprev), country_data_gen, 
+                         tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
+    abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
+    abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
+    abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
+    abs(tauoutput$ICombA[tauoutput$tau == 0]),
+    abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111))
+})
+
+# Assessing the Loop ------------------------------------------------------
+init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, 
+               Sh = 1,
+               IshDA = 0,IrhDA = 0,
+               IshA1 = 0,IrhA1 = 0,
+               IshA2 = 0,IrhA2 = 0,
+               IshA3 = 0,IrhA3 = 0,
+               IshA4 = 0,IrhA4 = 0,
+               IshA5 = 0,IrhA5 = 0,
+               IshA6 = 0,IrhA6 = 0,
+               IshA7 = 0,IrhA7 = 0,
+               IshA8 = 0,IrhA8 = 0,
+               IshA9 = 0,IrhA9 = 0,
+               IshAnEU = 0,IrhAnEU = 0,
+               IshH = 0, IrhH = 0)
+
+thetaparm = parms
+tau_range = country_data_gen$scaled_sales_amp
+tau_range <- c(0, tau_range, UK_amp)
+
+profvis({
+  
+  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
+  
+  for (i in 1:length(tau_range)) {
+    
+    parms2 = thetaparm
+    parms2["tau"] = tau_range[i]
+    
+    #out <- stode(y = init.state, func = amrimp, parms = parms2)
+    out <- ode(y = init.state, func = amrimp, parms = parms2, times = seq(0, 2000, by = 100))
+    
+    tauoutput[i,] <- c(tau_range[i], 
+                       (out[nrow(out),"Isa"] + out[nrow(out),"Ira"]),
+                       (sum(out[nrow(out),seq(6, 29)]))*100000,
+                       out[nrow(out),"Ira"]/ (out[nrow(out),"Isa"] + out[nrow(out),"Ira"]),
+                       sum(out[nrow(out),seq(7, 29, by =2)]) /  sum(out[nrow(out),seq(6, 29)]))
+  }
+  
+  tauoutput <- data.frame(tauoutput)
+  colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
+  
+  t <- c(sum_square_diff_dist(list(summarystatprev), country_data_gen, 
+                              tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
+         abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
+         abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
+         abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
+         abs(tauoutput$ICombA[tauoutput$tau == 0]),
+         abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111))
+})
+

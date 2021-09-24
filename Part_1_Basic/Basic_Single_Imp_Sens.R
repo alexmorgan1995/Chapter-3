@@ -59,7 +59,6 @@ amp_post <- read.csv(paste0("//csce.datastore.ed.ac.uk/csce/biology/users/s16782
 
 MAP_amp <- data.frame("Parameter" = colnames(amp_post), "MAP_Estimate" = colMeans(amp_post))
 
-MAP_amp["betaAA",2]
 # Testing for Monotonicity - Identify Delta and Rel  -----------------------------------------------
 
 #The aim of this section is to look at the relationship of changing each variable on delta_FBD and delta_res
@@ -310,7 +309,7 @@ plotrel_res$parm <- factor(plotrel_res$parm, levels = plotrel_res$parm)
 p_relres <- ggplot(plotrel_res, aes(x = parm, y = original)) + geom_hline(yintercept = 0, col ="red", size = 1.05) + geom_point(stat = "identity", size = 3) + 
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
-                                                                  axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
+                                                                  axis.text=element_text(size=12), axis.title =element_text(size=12), title = element_text(size=12)) +
   labs(title = bquote(bold("Sensitivity Analysis of relRes")), x ="Model Parameters", y = "PRCC")
 
 #Plotting rel's
@@ -415,7 +414,7 @@ testfbd <- fast99(model = ode_function_relfbd, factors = factors, n = 1000,
                                list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
-                               list(min=parms[["alpha"]]/10, max=parms[["alpha"]]*10),
+                               list(min=0.001, max=1),
                                list(min=parms[["zeta"]]/10, max=parms[["zeta"]]*10),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1),
@@ -432,7 +431,7 @@ testres <- fast99(model = ode_function_relres, factors = factors, n = 1000,
                                list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
-                               list(min=parms[["alpha"]]/10, max=parms[["alpha"]]*10),
+                               list(min=0.001, max=1),
                                list(min=parms[["zeta"]]/10, max=parms[["zeta"]]*10),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1),
@@ -460,21 +459,21 @@ plotdata_res$X <- factor(plotdata_res$X, levels = reorder(unique(plotdata_res$X)
 # Plotting the eFAST ------------------------------------------------------
 
 p_efast_fbd <- ggplot(plotdata_FBD, aes(fill = variable, x =  X, y = value)) + theme_bw() + 
-  geom_col(color = "black",position= "stack") + scale_x_discrete(expand = c(0, 0.5)) + scale_y_continuous(limits = c(0,0.6), expand = c(0, 0)) +
+  geom_col(color = "black",position= "stack") + scale_x_discrete(expand = c(0, 0.5)) + scale_y_continuous(limits = c(0,1), expand = c(0, 0)) +
   theme(legend.position=c(0.25, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
   scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = "eFAST total/first order sensitivity indices for RelFBD",
+  labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelFBD")),
        x ="", y = "Sensitivity Index") 
 
 p_efast_res <- ggplot(plotdata_res, aes(fill = variable, x =  X, y = value)) + theme_bw() + 
-  geom_col(color = "black",position= "stack") + scale_x_discrete(expand = c(0, 0.1)) + scale_y_continuous(limits = c(0,0.1), expand = c(0, 0)) +
-  theme(legend.position=c(0.25, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
+  geom_col(color = "black",position= "stack") + scale_x_discrete(expand = c(0, 0.7)) + scale_y_continuous(limits = c(0,0.6), expand = c(0, 0)) +
+  theme(legend.position=c(0.8, 0.85), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
   scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = "eFAST total/first order sensitivity indices for RelRes",
+  labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelRes")),
        x ="", y = "Sensitivity Index") 
 
 #Plotting rel's
@@ -485,5 +484,14 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
 
 ggsave(PRCC_plot, filename = "eFAST_relative.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in")
 
-#### Combined plot ####
+#### Combined plot for the RelRes Measure ####
+
+
+p_relres <- p_relres + labs(title = bquote(bold("Sensitivity Analysis of relRes")), x ="", y = "PRCC")
+p_efast_res <- p_efast_res + labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelRes")),
+                                  x ="Model Parameters", y = "Sensitivity Index") 
+comb_relres <- ggarrange(p_relres, p_efast_res, nrow = 2, ncol = 1)
+  
+ggsave(comb_relres, filename = "sens_PRCC_eFAST_relres.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
 
