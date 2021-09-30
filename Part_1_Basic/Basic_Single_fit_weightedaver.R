@@ -95,7 +95,6 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
                        (out[[1]][["Ish"]] + out[[1]][["Irh"]])*100000,
                        out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
                        out[[1]][["Irh"]] /  (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
-
   }
 
   colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
@@ -245,7 +244,7 @@ saveRDS(dist_save, file = "test_weightdist_simple_amp.rds")
 
 amp_post <- do.call(rbind,
                     lapply(list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "TEST_WEIGHT_PART1"), read.csv))
-amp_post$gen <- as.vector(sapply(1:5, 
+amp_post$gen <- as.vector(sapply(1:6, 
                                  function(x) rep(paste0("gen_",x), 1000)))
 
 l_amp_post <- lapply(1:length(colnames(amp_post)[-1]), function(x) melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[x])[,c(1,3)])
@@ -280,7 +279,7 @@ ggsave(p_comb, filename = "post_simple.png",dpi = 300, type = "cairo", width = 1
 
 # Attribution Plot --------------------------------------------------------
 
-post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "TEST_WEIGHT_PART1")[1:5], 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "TEST_WEIGHT_PART1")[1:6], 1))
 MAP_amp <- map_estimate(post_amp)
 
 MAP_amp <- data.frame("Parameters" = colnames(post_amp), "MAP_Estimate" = colMeans(post_amp))
@@ -289,7 +288,7 @@ MAP_amp <- data.frame("Parameters" = colnames(post_amp), "MAP_Estimate" = colMea
 
 #Baseline 
 
-parmtau <- seq(0,0.02, by = 0.001)
+parmtau <- seq(0,0.01, by = 0.0005)
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
 icombhdata <- data.frame(matrix(ncol = 8, nrow = 0))
 times <- seq(0, 200000, by = 100)
@@ -327,7 +326,7 @@ plotdata <- melt(icombhdata[icombhdata$group == unique(icombhdata$group)[1],],
 
 p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value*100000)) + theme_bw() + 
   geom_vline(xintercept = UK_amp, alpha = 0.3, size = 2) + 
-  geom_col(color = "black",position= "stack", width  = 0.001) + scale_x_continuous(expand = c(0, 0.0005)) + 
+  geom_col(color = "black",position= "stack", width  = 0.0005) + scale_x_continuous(expand = c(0, 0.0005)) + 
   scale_y_continuous(limits = c(0,10), expand = c(0, 0))  + 
   geom_text(label= c(round(icombhdata$IResRat[icombhdata$group == unique(icombhdata$group)[1]],digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
             position = "stack", angle = 45) +
