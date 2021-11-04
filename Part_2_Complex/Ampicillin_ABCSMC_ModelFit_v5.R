@@ -1,5 +1,5 @@
 library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
 setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data")
@@ -146,48 +146,26 @@ sum_square_diff_dist <- function(sum.stats, data.obs, model.obs) {
   return(sum(sumsquare))
 }
 
-computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data) {
+computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
   tau_range <- c(0, tau_range, UK_amp)
-  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
-   
+  tauoutput <- data.frame(matrix(nrow = length(tau_range), ncol = 5))
+  
   for (i in 1:length(tau_range)) {
-    temp <- matrix(NA, nrow = 1, ncol = 5)
-    
-    parms2 = c(ra = thetaparm[["ra"]], rh = thetaparm[["rh"]], ua = thetaparm[["ua"]], uh = thetaparm[["uh"]], tau = tau_range[i], psi = thetaparm[["psi"]],
-               
-               fracimp1 = thetaparm[["fracimp1"]], fracimp2 = thetaparm[["fracimp2"]], fracimp3 = thetaparm[["fracimp3"]], fracimp4 = thetaparm[["fracimp4"]], 
-               fracimp5 = thetaparm[["fracimp5"]], fracimp6 = thetaparm[["fracimp6"]], fracimp7 = thetaparm[["fracimp7"]], fracimp8 = thetaparm[["fracimp8"]], 
-               fracimp9 = thetaparm[["fracimp9"]], fracimp_nEU = thetaparm[["fracimp_nEU"]],
-               
-               imp1 = thetaparm[["imp1"]], imp2 = thetaparm[["imp2"]], imp3 = thetaparm[["imp3"]], imp4 =thetaparm[["imp4"]], 
-               imp5 = thetaparm[["imp5"]], imp6 = thetaparm[["imp6"]], imp7 = thetaparm[["imp7"]], imp8 = thetaparm[["imp8"]],
-               imp8 = thetaparm[["imp8"]], imp9 = thetaparm[["imp9"]],
-               
-               propres_imp1 = thetaparm[["propres_imp1"]], propres_imp2 = thetaparm[["propres_imp2"]], propres_imp3 = thetaparm[["propres_imp3"]], propres_imp4 = thetaparm[["propres_imp4"]], 
-               propres_imp5 = thetaparm[["propres_imp5"]], propres_imp6 = thetaparm[["propres_imp6"]], propres_imp7 = thetaparm[["propres_imp7"]], propres_imp8 = thetaparm[["propres_imp8"]], 
-               propres_imp9 = thetaparm[["propres_imp9"]],
-               
-               betaAA = thetaparm[["betaAA"]], betaHH = thetaparm[["betaHH"]], betaHD = thetaparm[["betaHD"]],
-               betaHI_EU = thetaparm[["betaHI_EU"]],
-               
-               imp_nEU = thetaparm[["imp_nEU"]], propres_impnEU = thetaparm[["propres_impnEU"]],
-               phi = thetaparm[["phi"]], kappa = thetaparm[["kappa"]], alpha = thetaparm[["alpha"]], zeta = thetaparm[["zeta"]])
-    
-    out <- ode(y = init.state, func = fitmodel, times = times, parms = parms2)
-    
-    temp[1,1] <- tau_range[i]
-    temp[1,2] <- (out[nrow(out),"Isa"] + out[nrow(out),"Ira"])
-    temp[1,3] <- (sum(out[nrow(out),seq(6, 29)]))*100000
-    temp[1,4] <- out[nrow(out),"Ira"]/ (out[nrow(out),"Isa"] + out[nrow(out),"Ira"])
-    temp[1,5] <- sum(out[nrow(out),seq(7, 29, by =2)]) /  sum(out[nrow(out),seq(6, 29)])
-    tauoutput[i,] <- temp
-  }
-  tauoutput <- data.frame(tauoutput)
 
+    parms2 = thetaparm
+    parms2["tau"] = tau_range[i]
+    
+    #out <- runsteady(y = init.state, func = fitmodel, parms = parms2, times = c(0, Inf))
+    out <- runsteady(y = init.state, func = fitmodel, parms = parms2, times = c(0, Inf))
+    
+    tauoutput[i,] <- c(tau_range[i],
+                       out[[1]][["Isa"]] + out[[1]][["Ira"]],
+                       sum(out[[1]][c(5:28)])*100000,
+                       out[[1]][["Ira"]]/ (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
+                       sum(out[[1]][seq(6,28, by = 2)]) /  sum(out[[1]][c(5:28)]))
+  }
   
   colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
-  
-  test <<- tauoutput
   
   return(c(distanceABC(list(sum.stats), data, 
                        tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
@@ -207,12 +185,28 @@ prior.non.zero <- function(par){
   prod(sapply(1:10, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
-
-ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, init.state, times, data, data_match) {
+ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, init.state, data, data_match) {
   N_ITER_list <- list()
+  
+  fit_parms <- c("betaAA", "betaHH", "betaHD", "betaHI_EU", "imp_nEU", "propres_impnEU", "phi", "kappa", "alpha", "zeta")
+  thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
+                 
+                 fracimp1 = as.numeric(data_match[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(data_match[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(data_match[4,"Normalised_Usage_2018"]), 
+                 fracimp4 = as.numeric(data_match[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(data_match[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(data_match[7,"Normalised_Usage_2018"]), 
+                 fracimp7 = as.numeric(data_match[8,"Normalised_Usage_2018"]), fracimp8 = as.numeric(data_match[9,"Normalised_Usage_2018"]), 
+                 fracimp9 = as.numeric(data_match[10,"Normalised_Usage_2018"]), fracimp_nEU = 1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"])),
+                 
+                 imp1 = data_match[2,"Foodborne_Carriage_2019"], imp2 = data_match[3,"Foodborne_Carriage_2019"], imp3 = data_match[4,"Foodborne_Carriage_2019"], imp4 = data_match[5,"Foodborne_Carriage_2019"], 
+                 imp5 = data_match[6,"Foodborne_Carriage_2019"], imp6 = data_match[7,"Foodborne_Carriage_2019"], imp7 = data_match[8,"Foodborne_Carriage_2019"], imp8 = data_match[9,"Foodborne_Carriage_2019"],
+                 imp8 = data_match[9,"Foodborne_Carriage_2019"], imp9 = data_match[10,"Foodborne_Carriage_2019"],
+                 
+                 propres_imp1 = data_match[2,"Prop_Amp_Res"], propres_imp2 = data_match[3,"Prop_Amp_Res"], propres_imp3 = data_match[4,"Prop_Amp_Res"], propres_imp4 = data_match[5,"Prop_Amp_Res"], 
+                 propres_imp5 = data_match[6,"Prop_Amp_Res"], propres_imp6 = data_match[7,"Prop_Amp_Res"], propres_imp7 = data_match[8,"Prop_Amp_Res"], propres_imp8 = data_match[9,"Prop_Amp_Res"], 
+                 propres_imp9 = data_match[10,"Prop_Amp_Res"])
+  
   for(g in 1:G) {
     i <- 1
-    dist_data <- data.frame(matrix(nrow = 1000, ncol = 6))
+    dist_data <- data.frame(matrix(nrow = G, ncol = 6))
     N_ITER <- 1
     
     while(i <= N) {
@@ -247,32 +241,12 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         d_propres_impnEU <- par[10]
       }
       
-      
       if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI_EU, d_imp_nEU, d_propres_impnEU))) {
         m <- 0
         
-        thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = tau_range[i], psi = 0.656,
-                       
-                       fracimp1 = as.numeric(data_match[2,"Normalised_Usage_2018"]), fracimp2 = as.numeric(data_match[3,"Normalised_Usage_2018"]), fracimp3 = as.numeric(data_match[4,"Normalised_Usage_2018"]), 
-                       fracimp4 = as.numeric(data_match[5,"Normalised_Usage_2018"]), fracimp5 = as.numeric(data_match[6,"Normalised_Usage_2018"]), fracimp6 = as.numeric(data_match[7,"Normalised_Usage_2018"]), 
-                       fracimp7 = as.numeric(data_match[8,"Normalised_Usage_2018"]), fracimp8 = as.numeric(data_match[9,"Normalised_Usage_2018"]), 
-                       fracimp9 = as.numeric(data_match[10,"Normalised_Usage_2018"]), fracimp_nEU = 1 - sum(as.numeric(country_data_imp[2:10,"Normalised_Usage_2018"])),
-                       
-                       imp1 = data_match[2,"Foodborne_Carriage_2019"], imp2 = data_match[3,"Foodborne_Carriage_2019"], imp3 = data_match[4,"Foodborne_Carriage_2019"], imp4 = data_match[5,"Foodborne_Carriage_2019"], 
-                       imp5 = data_match[6,"Foodborne_Carriage_2019"], imp6 = data_match[7,"Foodborne_Carriage_2019"], imp7 = data_match[8,"Foodborne_Carriage_2019"], imp8 = data_match[9,"Foodborne_Carriage_2019"],
-                       imp8 = data_match[9,"Foodborne_Carriage_2019"], imp9 = data_match[10,"Foodborne_Carriage_2019"],
-                       
-                       propres_imp1 = data_match[2,"Prop_Amp_Res"], propres_imp2 = data_match[3,"Prop_Amp_Res"], propres_imp3 = data_match[4,"Prop_Amp_Res"], propres_imp4 = data_match[5,"Prop_Amp_Res"], 
-                       propres_imp5 = data_match[6,"Prop_Amp_Res"], propres_imp6 = data_match[7,"Prop_Amp_Res"], propres_imp7 = data_match[8,"Prop_Amp_Res"], propres_imp8 = data_match[9,"Prop_Amp_Res"], 
-                       propres_imp9 = data_match[10,"Prop_Amp_Res"],
-                       
-                       betaAA = d_betaAA, betaHH = d_betaHH, betaHD = d_betaHD,
-                       betaHI_EU = d_betaHI_EU,
-                       
-                       imp_nEU = d_imp_nEU, propres_impnEU = d_propres_impnEU,
-                       phi = d_phi, kappa = d_kappa, alpha = d_alpha, zeta = d_zeta)
+        thetaparm[fit_parms] <- c(d_betaAA, d_betaHH, d_betaHD, d_betaHI_EU, d_imp_nEU, d_propres_impnEU, d_phi, d_kappa, d_alpha, d_zeta)
         
-        dist <- computeDistanceABC_ALEX(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data)
+        dist <- computeDistanceABC_ALEX(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, data)
         print(dist)
         
         if((dist[1] <= epsilon_dist[g]) && (dist[2] <= epsilon_foodH[g]) && (dist[3] <= epsilon_AMRH[g]) && 
@@ -307,14 +281,13 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
     print(res.old)
     w.old <- w.new/sum(w.new)
     colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH","betaHI_EU", "imp_nEU", "propres_impnEU")
-    write.csv(res.new, file = paste("PART2_AMP_modelfit_",g,".csv",sep=""), row.names=FALSE)
+    write.csv(res.new, file = paste("TEST_PART2_AMP_modelfit_",g,".csv",sep=""), row.names=FALSE)
     ####
   }
   return(N_ITER_list)
 }
 
-N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
-
+N <- 100 #(ACCEPTED PARTICLES PER GENERATION)
 
 lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 lm.upp <- c(0.05, 0.1, 10, 1, 0.001, 0.001, 0.025, 0.0005, 1, 1)
@@ -333,7 +306,7 @@ epsilon_AMRH <-  c(0.185, 0.185*0.75, 0.185*0.6, 0.185*0.5, 0.185*0.4, 0.185*0.3
 epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.4, 0.017173052*0.3, 0.017173052*0.2, 0.017173052*0.15)
 epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.4, 0.3333333*0.3, 0.3333333*0.2, 0.3333333*0.15)
 
-dist_save <- ABC_algorithm(N = 1000, 
+dist_save <- ABC_algorithm(N = 100, 
               G = 8,
               sum.stats = summarystatprev, 
               distanceABC = sum_square_diff_dist, 
@@ -352,59 +325,8 @@ dist_save <- ABC_algorithm(N = 1000,
                              IshA8 = 0,IrhA8 = 0,
                              IshA9 = 0,IrhA9 = 0,
                              IshAnEU = 0,IrhAnEU = 0,
-                             IshH = 0, IrhH = 0), 
-              times = seq(0, 2000, by = 100), 
+                             IshH = 0, IrhH = 0),  
               data = country_data_gen,
               data_match = country_data_imp)
 
 end_time <- Sys.time(); end_time - start_time
-
-saveRDS(dist_save, file = "dist_complexamp_list.rds")
-
-# Assess Posterior --------------------------------------------------------
-
-#Last Generation 
-last_gen <- read.csv(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^complexmodel_ABC_SMC_gen_amp.*?\\.csv")[1])
-
-full_plot_list <- list()
-
-for(i in 1:ncol(last_gen)) {
-  full_plot_list[[i]] <- ggplot(last_gen, aes(x=last_gen[,i])) + geom_density(alpha=.5, fill = "red") + 
-    scale_x_continuous(expand = c(0, 0), name = colnames(last_gen)[i]) + scale_y_continuous(expand = c(0, 0), name = "") 
-}
-
-full_plot_list
-
-#All fitted generations 
-
-amp_post <- do.call(rbind,
-                    lapply(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data", pattern = "^ICOMBHTEST.*?\\.csv")[1:4], read.csv))
-amp_post$gen <- as.vector(sapply(1:4, 
-                                 function(x) rep(paste0("gen_",x), 1000)))
-
-t <- melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[1])[,c(1,3)]
-
-l_amp_post <- lapply(1:length(colnames(amp_post)[-1]), function(x) melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[x])[,c(1,3)])
-
-names = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
-          expression(paste("Rate of Antibiotic-Resistant to Antibiotic-Sensitive Reversion (", phi, ")")),
-          expression(paste("Efficacy of Antibiotic-Mediated Animal Recovery (", kappa, ")")),
-          expression(paste("Transmission-related Antibiotic Resistant Fitness Cost (", alpha, ")")),
-          expression(paste("Background Infection Rate (", zeta, ")")),
-          expression(paste("Rate of Domestic Animal-to-Human Transmission (", beta[HD], ")")),
-          expression(paste("Rate of Domestic Human-to-Human Transmission (", beta[HH], ")")),
-          expression(paste("Rate of EU Animal-to-Human Transmission (", beta[HI_EU], ")")),
-          expression(paste("Proportion of non-EU Imports Contaminated (", imp[nonEU], ")")),
-          expression(paste("Proportion of Contaminated non-EU Imports Resistant (", PropRes[nonEU], ")")))
-
-amp_p_list <- list()
-
-for(i in 1:length(names)){ 
-  amp_p_list[[i]] <- ggplot(l_amp_post[[i]], aes(x=value, fill= gen)) + geom_density(alpha=.5) + 
-    scale_x_continuous(expand = c(0, 0), name = names[i]) + 
-    scale_y_continuous(expand = c(0, 0), name = "") +
-    labs(fill = NULL) + scale_fill_discrete(labels = sapply(1:length(unique(amp_post$gen)), function(x) paste0("Generation ", x)))+
-    theme(legend.text=element_text(size=14),  axis.text=element_text(size=14),
-          axis.title.y=element_text(size=14),axis.title.x= element_text(size=14), plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
-}
-

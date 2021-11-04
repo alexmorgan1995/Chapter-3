@@ -1,8 +1,9 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("betareg")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/fit_data")
+#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_2/Chapter2_Fit_Data/Final_Data")
 
 #Function to remove negative prevalence values and round large DP numbers
 rounding <- function(x) {
@@ -21,10 +22,10 @@ amrimp <- function(t, y, parms) {
     dIsa = betaAA*Isa*Sa + phi*Ira - kappa*tau*Isa - tau*Isa - ra*Isa - ua*Isa + zeta*Sa
     dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + zeta*Sa*(1-alpha)
     
-    dSh = uh + rh*(1-Sh) - 
+    dSh = uh + rh*(1-Sh) - uh*Sh - 
       
-      betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshH) - 
-      (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhH) - 
+      betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshA4+IshA5+IshA6+IshA7+IshA8+IshA9+IshAnEU+IshH) - 
+      (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhA4+IrhA5+IrhA6+IrhA7+IrhA8+IrhA9+IrhAnEU+IrhH) - 
       
       psi*(betaHD*Isa*Sh) - 
       psi*(1-alpha)*(betaHD*Ira*Sh) - 
@@ -56,9 +57,9 @@ amrimp <- function(t, y, parms) {
       (1-psi)*(imp9)*(betaHI_EU*fracimp9*(1-propres_imp9)*Sh) - 
       (1-psi)*(imp9)*(1-alpha)*(betaHI_EU*fracimp9*propres_imp9*Sh) - 
       
-      (1-psi)*(imp_nEU)*(betaHI_nEU*fracimp_nEU*(1-propres_impnEU)*Sh) - 
-      (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_nEU*fracimp_nEU*propres_impnEU*Sh)
-      
+      (1-psi)*(imp_nEU)*(betaHI_EU*fracimp_nEU*(1-propres_impnEU)*Sh) - 
+      (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_EU*fracimp_nEU*propres_impnEU*Sh)
+    
     dIshDA = psi*betaHD*Isa*Sh  - rh*IshDA - uh*IshDA 
     dIrhDA = psi*(1-alpha)*betaHD*Ira*Sh - rh*IrhDA - uh*IrhDA  
     
@@ -89,8 +90,8 @@ amrimp <- function(t, y, parms) {
     dIshA9 = (1-psi)*(imp9)*(betaHI_EU*fracimp9*(1-propres_imp9)*Sh) - rh*IshA9 - uh*IshA9 
     dIrhA9 = (1-psi)*(imp9)*(1-alpha)*(betaHI_EU*fracimp9*propres_imp9*Sh) - rh*IrhA9 - uh*IrhA9  
     
-    dIshAnEU = (1-psi)*(imp_nEU)*(betaHI_nEU*fracimp_nEU*(1-propres_impnEU)*Sh) - rh*IshAnEU - uh*IshAnEU 
-    dIrhAnEU = (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_nEU*fracimp_nEU*propres_impnEU*Sh) - rh*IrhAnEU - uh*IrhAnEU  
+    dIshAnEU = (1-psi)*(imp_nEU)*(betaHI_EU*fracimp_nEU*(1-propres_impnEU)*Sh) - rh*IshAnEU - uh*IshAnEU 
+    dIrhAnEU = (1-psi)*(imp_nEU)*(1-alpha)*(betaHI_EU*fracimp_nEU*propres_impnEU*Sh) - rh*IrhAnEU - uh*IrhAnEU  
     
     dIshH = betaHH*Sh*(IshDA+IshA1+IshA2+IshA3+IshA4+IshA5+IshA6+IshA7+IshA8+IshA9+IshAnEU+IshH) - rh*IshH - uh*IshH 
     dIrhH = (1-alpha)*betaHH*Sh*(IrhDA+IrhA1+IrhA2+IrhA3+IrhA4+IrhA5+IrhA6+IrhA7+IrhA8+IrhA9+IrhAnEU+IrhH)- rh*IrhH - uh*IrhH 
@@ -117,20 +118,45 @@ amrimp <- function(t, y, parms) {
 country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
+country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 
 country_data_gen <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/res_sales_generalfit.csv") #This is data for pigs 
+country_data_gen[,13:14] <- country_data_gen[,13:14]/1000
+
+UK_amp <- country_data_gen$scaled_sales_amp[country_data_gen$Country == "United Kingdom"]
+
 country_data_gen <- country_data_gen[country_data_gen$num_test_amp >= 10,]
 
-plot(country_data_gen$scaled_sales_tet, country_data_gen$propres_tet)
-plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp)
+country_data_gen$lower_amp <- unlist(lapply(1:nrow(country_data_gen), function(i) prop.test(country_data_gen$isol_res_amp[i],
+                                                                                            country_data_gen$num_test_amp[i])[[6]][[1]]))
+country_data_gen$upper_amp <- unlist(lapply(1:nrow(country_data_gen), function(i) prop.test(country_data_gen$isol_res_amp[i],
+                                                                                            country_data_gen$num_test_amp[i])[[6]][[2]]))
 
-# Import Countries
+plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp, ylim = c(0,1))
 
-ggplot(country_data_imp, aes(x = tet_anti_usage, y = Prop_Tet_Res, size = Foodborne_Carriage_2019, col = Country_of_Origin )) + geom_point() + 
-  scale_size_continuous(range = c(3,15)) + theme_bw() + scale_x_continuous(limits = c(0, 50)) + scale_y_continuous(limits = c(0.25, 0.8)) + 
-  labs(x ="Tetracycline Sales in Fattening Pig (g/PCU)", y = "Proportion of Resistant Livestock", size = "Proportion Of Food Products Contaminated") +
-  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) +
-  geom_text(aes(label=Country_of_Origin),hjust=-0.1 , vjust=0) + scale_color_discrete(guide = 'none')
 
+# Beta Regression ------------------------------------------------------
+#We are looking at two variables here - Pig_tetra_sales and ResPropAnim 
+
+#Get summary statistics of your variables 
+summary(country_data_gen)
+
+#If we wanted to conduct a poisson regression or aany other type of linea regression - at this point we would have to check for
+#Colinearity, homoscdasticty and make sure the data conforms to the assumptions for each model 
+
+#Transform the Data to allow for x = (0,1)
+country_data_gen$ResPropAnim_trans <- ((country_data_gen$propres_amp*(nrow(country_data_gen)-1)) + 0.5)/nrow(country_data_gen)
+
+#Start the beta-regression
+
+#Tet fattening Pigs
+output_amp <- betareg(ResPropAnim_trans ~ scaled_sales_amp, data = country_data_gen)
+summary(output_amp)
+exp(coef(output_amp))[2]
+
+ggplot(data = country_data_gen, aes(x = scaled_sales_amp, y= propres_amp))  + geom_point() + 
+  scale_x_continuous(expand = c(0, 0), limits = c(0,0.025)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
+  labs(x ="Livestock Antibiotic Usage (g/PCU)", y = "Antibiotic-Resistant Livestock Carriage") +
+  geom_errorbar(aes(ymin=lower_amp, ymax=upper_amp), colour="black", width=.1, inherit.aes =  TRUE) + 
+  geom_line(aes(y = predict(output_amp, country_data_gen), x = scaled_sales_amp), colour = "red", size = 1.2)
+  
