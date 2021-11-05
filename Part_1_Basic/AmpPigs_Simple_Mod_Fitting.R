@@ -2,7 +2,7 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
 
 rm(list=ls())
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Data/Salmonella_Pigs")
 
 # Single Model ------------------------------------------------------------
 
@@ -26,19 +26,19 @@ amrimp <- function(t, y, parms) {
     dIrh = (1-alpha)*(betaHH*Irh*Sh) + (1-alpha)*psi*(betaHD*Ira*Sh) + 
       (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
     
-    return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh)))
+    CumS = betaHH*Ish*Sh + psi*betaHD*Isa*Sh + (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh) 
+    CumR = (1-alpha)*(betaHH*Irh*Sh) + (1-alpha)*psi*(betaHD*Ira*Sh) + (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh)
+    
+    return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh), CumS, CumR))
   })
 }
 
 
-#### Data Import ####
+# Livestock Dynamics Dataset ----------------------------------------------
 
 #Import Data
-dataamp_pigs_raw <- read.csv("Amp_FatPigs_Comb.csv")
-dataamp_hum_raw <- read.csv("Hum_FatPigs.csv")
-
-dataamp_pigs <- dataamp_pigs_raw
-dataamp_hum <- dataamp_hum_raw
+dataamp_pigs_raw <- read.csv("Amp_FatPigs_Comb.csv"); dataamp_pigs <- dataamp_pigs_raw
+dataamp_hum_raw <- read.csv("Hum_FatPigs.csv"); dataamp_hum <- dataamp_hum_raw
 
 #Cleaning Data - Animals
 dataamp_pigs[,(2+5):(6+5)][dataamp_pigs[,2:6] < 10] <- NA #If N > 10, replace the particular country/year with NA for the No. of pos isolates
@@ -63,14 +63,8 @@ colnames(melt_amp_pigs)[c(2,3)] <- c("Year", "Resistance")
 #only include countries/years which are present in the resistance dataset
 dataamp_hum <- dataamp_hum[dataamp_hum$Country %in% intersect(dataamp_hum$Country, dataamp_pigs$Country),]
 colnames(dataamp_hum)[26:31] <- as.character(2014:2019)
-dataamp_hum_melt <- melt(dataamp_hum, id.vars = "Country", measure.vars = pig_yrs)
-colnames(dataamp_hum_melt)[c(2,3)] <- c("Year", "Resistance")
-
-# Combine Human and Livestock Dataset -----------------------------------------------------------------
-melt_amp_pigs$ResPropHum <- dataamp_hum_melt[,3] #Obtain the melted human resistances
-
-melt_amp_pigs <- melt_amp_pigs[!is.na(melt_amp_pigs$Resistance),]
-melt_amp_pigs <- melt_amp_pigs[!is.na(melt_amp_pigs$usage),] # Remove all rows with NAs for usage and resistance
+melt_amp_pigs$ResPropHum <- melt(dataamp_hum, id.vars = "Country", measure.vars = pig_yrs)[,3]
+melt_amp_pigs <- melt_amp_pigs[!(is.na(melt_amp_pigs$Resistance) | is.na(melt_amp_pigs$usage)),] # Remove all rows with NAs for usage and resistance
 
 #Add 95% CIs for each datapoint
 melt_amp_pigs$lower_amp <- unlist(lapply(1:nrow(melt_amp_pigs), function(i) prop.test(melt_amp_pigs$IsolPos[i],melt_amp_pigs$N[i])[[6]][[1]]))
@@ -84,24 +78,17 @@ ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country)) + geom_po
   scale_x_continuous(expand = c(0, 0), limits = c(0,0.055)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
   labs(x ="Livestock Antibiotic Usage (g/PCU)", y = "Antibiotic-Resistant Livestock Carriage")
 
-# Data Import -------------------------------------------------------------
 
-country_data_imp <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/FullData_2021_v1_trim.csv") #This is data for pigs 
-country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
+# Food Usage Dataset ------------------------------------------------------
+
+country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
+country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 
-
-dataamp_pigs_raw
-
-
-UK_tet <- country_data_gen$scaled_sales_tet[country_data_gen$Country == "United Kingdom"]
-UK_amp <- country_data_gen$scaled_sales_amp[country_data_gen$Country == "United Kingdom"]
-
-country_data_gen <- country_data_gen[country_data_gen$num_test_amp >= 10,]
-
-plot(country_data_gen$scaled_sales_tet, country_data_gen$propres_tet, ylim = c(0,1))
-plot(country_data_gen$scaled_sales_amp, country_data_gen$propres_amp, ylim = c(0,1))
+UK_amp_res <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",12:15], na.rm = T)
+UK_amp_usage <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",17:19], na.rm = T)/1000
+UK_cont <- country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]
 
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
@@ -110,16 +97,51 @@ EU_res <- mean(country_data_imp$Prop_Amp_Res [2:10])
 
 #### Approximate Bayesian Computation - SMC ####
 
-summarystatprev <- function(prev) {
-  return(prev$propres_amp)
+prior.non.zero<-function(par, lm.low, lm.upp){
+  prod(sapply(1:6, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
-sum_square_diff_dist <- function(sum.stats, data.obs, model.obs) {
-  sumsquare <- sapply(sum.stats, function(x) {
-    sumsquare <- abs((x(data.obs) - x(model.obs))^2)
-  })
+#Return the sum of squares between resistance and the model output
+sum_square_diff_dist <- function(data.obs, model.obs) {
+  sumsquare <- (data.obs$ResPropAnim - model.obs$ResPropAnim)^2
   return(sum(sumsquare))
 }
+
+#Compute the distances for all 3 summary statistics - this section involves running the model
+computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
+  tauoutput <- data.frame(matrix(nrow = length(tau_range), ncol = 5))
+  tau_range <- append(tau_range, UK_amp)
+  parms2 = thetaparm
+  
+  for (i in 1:length(tau_range)) {
+    
+    parms2["tau"] = tau_range[i]
+    out <- runsteady(y = init.state, func = fitmodel, times = c(0, Inf), parms = parms2)
+    
+    tauoutput[i,] <- c(tau_range[i],
+                       (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
+                       ((out[[2]] + out[[3]])*(446000000))/100000,
+                       out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
+                       out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
+    
+  }
+  
+  colnames(tauoutput) <- c("tau", "IncH", "ResPropAnim", "ResPropHum") 
+  return(c(distanceABC(data, tauoutput[!tauoutput$tau == avg_EU_usage,]),
+           abs(tauoutput$IncH[tauoutput$tau == avg_EU_usage] - 0.593),
+           abs(tauoutput$ResPropHum[tauoutput$tau == avg_EU_usage] - avg_hum_res)))
+}
+
+
+c(distanceABC(list(sum.stats), data, 
+              tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
+  abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
+  abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
+  abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - UK_cont),
+  abs(tauoutput$ICombA[tauoutput$tau == 0]),
+  abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111))
+
+
 
 computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data) {
   tau_range <- c(0, tau_range, UK_amp)
@@ -151,11 +173,10 @@ computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range,
   
   return(c(distanceABC(list(sum.stats), data, 
                        tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
-           abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
+           abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 0.593),
            abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
            abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
-           abs(tauoutput$ICombA[tauoutput$tau == 0]),
-           abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111)))
+           abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - UK_amp)))
 }
 
 
@@ -222,7 +243,7 @@ ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, ini
         print(dist)
 
         if((dist[1] <= epsilon_dist[g]) && (dist[2] <= epsilon_foodH[g]) && (dist[3] <= epsilon_AMRH[g]) && 
-           (dist[4] <= epsilon_foodA[g]) && (dist[5] < 0.95) && (dist[6] <= epsilon_AMRA[g]) && (!is.na(dist))) {
+           (dist[4] <= epsilon_foodA[g]) && (dist[5] <= epsilon_AMRA[g]) && (!is.na(dist))) {
           
           # Store results
           res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI) 
