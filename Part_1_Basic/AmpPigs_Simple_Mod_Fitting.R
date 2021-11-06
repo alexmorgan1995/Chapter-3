@@ -1,8 +1,10 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("sensitivity")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Data/Salmonella_Pigs")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Data/Salmonella_Pigs")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+
 
 # Single Model ------------------------------------------------------------
 
@@ -78,10 +80,9 @@ ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country)) + geom_po
   scale_x_continuous(expand = c(0, 0), limits = c(0,0.055)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
   labs(x ="Livestock Antibiotic Usage (g/PCU)", y = "Antibiotic-Resistant Livestock Carriage")
 
-
 # Food Usage Dataset ------------------------------------------------------
 
-country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Data/FullData_2021_v1_trim.csv") #This is data for pigs 
+country_data_imp <- read.csv("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
@@ -89,16 +90,17 @@ country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 UK_amp_res <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",12:15], na.rm = T)
 UK_amp_usage <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",17:19], na.rm = T)/1000
 UK_cont <- country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]
+UK_food_usage <- country_data_imp$Corrected_Usage_18[country_data_imp$Country_of_Origin == "UK Origin"]
 
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
 EU_cont <- mean(country_data_imp$Foodborne_Carriage_2019[2:10])
-EU_res <- mean(country_data_imp$Prop_Amp_Res [2:10])
+EU_res <- mean(country_data_imp$Prop_Amp_Res[2:10])
 
 #### Approximate Bayesian Computation - SMC ####
 
 prior.non.zero<-function(par, lm.low, lm.upp){
-  prod(sapply(1:6, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
+  prod(sapply(1:8, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
 #Return the sum of squares between resistance and the model output
@@ -110,7 +112,7 @@ sum_square_diff_dist <- function(data.obs, model.obs) {
 #Compute the distances for all 3 summary statistics - this section involves running the model
 computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
   tauoutput <- data.frame(matrix(nrow = length(tau_range), ncol = 5))
-  tau_range <- append(tau_range, UK_amp)
+  tau_range <- append(tau_range, UK_amp_usage)
   parms2 = thetaparm
   
   for (i in 1:length(tau_range)) {
@@ -119,76 +121,180 @@ computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm,
     out <- runsteady(y = init.state, func = fitmodel, times = c(0, Inf), parms = parms2)
     
     tauoutput[i,] <- c(tau_range[i],
-                       (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
                        ((out[[2]] + out[[3]])*(446000000))/100000,
+                       (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
                        out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
                        out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
-    
   }
   
-  colnames(tauoutput) <- c("tau", "IncH", "ResPropAnim", "ResPropHum") 
-  return(c(distanceABC(data, tauoutput[!tauoutput$tau == avg_EU_usage,]),
-           abs(tauoutput$IncH[tauoutput$tau == avg_EU_usage] - 0.593),
-           abs(tauoutput$ResPropHum[tauoutput$tau == avg_EU_usage] - avg_hum_res)))
+  colnames(tauoutput) <- c("tau", "IncH", "ICombA", "ResPropAnim", "ResPropHum")
+  
+  return(c(distanceABC(data, tauoutput[(!tauoutput$tau == UK_amp_usage & !tauoutput$tau == 0),]),
+           abs(tauoutput$ICombH[tauoutput$tau == UK_amp_usage] - 0.593),
+           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - 0.185),
+           abs(tauoutput$ICombA[tauoutput$tau == UK_amp_usage] - UK_cont),
+           abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
+}
+
+# Single Particle of the Model Fit ---------------------------------------------
+
+singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilon, 
+                      tau_range, data, lm.low, lm.upp, w.old, sigma, res.old, N) {
+  i <- 0
+  m <- 0
+  w.new <- 0
+  
+  while(i <= 1) {
+    m <- m + 1
+    
+    if(G == 1) {
+      d_betaAA <- runif(1, min = 0, max = 0.035)
+      d_phi <- runif(1, min = 0, max = 0.1)
+      d_kappa <- runif(1, min = 0, max = 10)
+      d_alpha <- rbeta(1, 1.5, 8.5)
+      d_zeta <- runif(1, 0, 0.005)
+      d_betaHD <- runif(1, 0, 0.001)
+      d_betaHH <- runif(1, 0, 0.01)
+      d_betaHI <- runif(1, 0, 0.0002)
+    } else { 
+      p <- sample(seq(1,N),1,prob = w.old) # check w.old here
+      par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp)
+      d_betaAA<-par[1]
+      d_phi<-par[2]
+      d_kappa<-par[3]
+      d_alpha<-par[4]
+      d_zeta <- par[5]
+      d_betaHD <- par[6]
+      d_betaHH <- par[7]
+      d_betaHI <- par[8]
+    }
+    
+    new.parms = c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI)
+    
+  
+    if(prior.non.zero(new.parms, lm.low, lm.upp)) {
+      
+      thetaparm[c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH", "betaHI")] <- new.parms
+      
+      dist <- computeDistanceABC_ALEX(distanceABC, fitmodel, tau_range, thetaparm, init.state, data)
+      
+      if((dist[1] <= epsilon[["dist"]][G]) && (dist[2] <= epsilon[["foodH"]][G]) && (dist[3] <= epsilon[["AMRH"]][G]) && 
+         (dist[4] <= epsilon[["foodA"]][G]) && (dist[5] <= epsilon[["AMRA"]][G]) && (!is.na(dist))) {
+        
+        if(G==1){
+          w.new <- 1
+        } else {
+          w1 <- prod(c(sapply(c(1:3,5:8), function(b) dunif(new.parms[b], min=lm.low[b], max=lm.upp[b])),
+                       dbeta(new.parms[4], 1.5, 8.5))) 
+          w2 <- sum(sapply(1:N, function(a) w.old[a]* dtmvnorm(new.parms, mean=res.old[a,], sigma=sigma, lower=lm.low, upper=lm.upp)))
+          w.new <- w1/w2
+        }
+        i <- i + 1
+        return(list(dist, m, new.parms, w.new))
+      }
+    }
+  }
 }
 
 
-c(distanceABC(list(sum.stats), data, 
-              tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
-  abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 3.26),
-  abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
-  abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - UK_cont),
-  abs(tauoutput$ICombA[tauoutput$tau == 0]),
-  abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - 0.1111111))
+# ABC-SMC Function --------------------------------------------------------
 
-
-
-computeDistanceABC_ALEX <- function(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data) {
-  tau_range <- c(0, tau_range, UK_amp)
-  tauoutput <- matrix(nrow = length(tau_range), ncol = 5)
+ABC_algorithm <- function(N, G, distanceABC, fitmodel, tau_range, init.state, data, epsilon, lm.low, lm.upp, thetaparm)  {
+  out <- list()
   
-  for (i in 1:length(tau_range)) {
-    temp <- matrix(NA, nrow = 1, ncol = 5)
+  for(g in 1:G) {
     
-    parms2 = c(ra = thetaparm[["ra"]], rh = thetaparm[["rh"]], ua = thetaparm[["ua"]], uh = thetaparm[["uh"]], 
-               betaAA = thetaparm[["betaAA"]], betaHH = thetaparm[["betaHH"]], tau = tau_range[i],
-               betaHD = thetaparm[["betaHD"]],  betaHI = thetaparm[["betaHI"]], 
-               
-               phi = thetaparm[["phi"]], kappa = thetaparm[["kappa"]], alpha = thetaparm[["alpha"]], zeta = thetaparm[["zeta"]], 
-               
-               psi = thetaparm[["psi"]], fracimp = thetaparm[["fracimp"]], propres_imp = thetaparm[["propres_imp"]])
-               
-    out <- ode(y = init.state, func = fitmodel, times = times, parms = parms2)
+    print(paste0("Generation ", g, " | Time: ", Sys.time()))
     
-    temp[1,1] <- tau_range[i]
-    temp[1,2] <- (out[nrow(out),"Isa"] + out[nrow(out),"Ira"])
-    temp[1,3] <- (out[nrow(out),"Ish"] + out[nrow(out),"Irh"])*100000
-    temp[1,4] <- out[nrow(out),"Ira"]/ (out[nrow(out),"Isa"] + out[nrow(out),"Ira"])
-    temp[1,5] <- out[nrow(out),"Irh"] / (out[nrow(out),"Ish"] + out[nrow(out),"Irh"])
-    tauoutput[i,] <- temp
-  }
-  tauoutput <- data.frame(tauoutput)
+    if(g == 1) {
+      sigma <- 0
+      res.old <- 0
+      w.old <- 0
+    }
+    
+    clusterExport(cl, varlist = c("amrimp", "computeDistanceABC_ALEX", "prior.non.zero", "sum_square_diff_dist",
+                                  "melt_amp_pigs", "UK_amp_res", "UK_amp_usage", "UK_cont"))
+    
+    print("test")
+    
+    particles <- parLapply(cl, 
+                           1:N, 
+                           singlerun, 
+                           G = g, 
+                           init.state = init.state,
+                           distanceABC = sum_square_diff_dist,
+                           fitmodel = amrimp, 
+                           thetaparm = thetaparm, 
+                           epsilon = epsilon,
+                           tau_range = melt_amp_pigs$Usage,
+                           data = melt_amp_pigs,
+                           lm.low = lm.low,
+                           lm.upp = lm.upp,
+                           w.old = w.old, 
+                           sigma = sigma, 
+                           res.old = res.old,
+                           N = N)
+    
+    dat_dist <- as.matrix(do.call(rbind, lapply(particles, "[[", 1)))
+    dat_nruns <- do.call(sum, lapply(particles, "[[", 2))
+    res.new <- as.matrix(do.call(rbind, lapply(particles, "[[", 3)))
+    w.new <- as.matrix(do.call(rbind, lapply(particles, "[[", 4)))
+    
+    sigma <- cov(res.new) 
+    res.old <- res.new
+    w.old <- w.new/sum(w.new)
+    
+    out[[g]] <- list(dat_nruns, dat_dist, res.old, w.old)
+    colnames(res.old) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH", "betaHI")
+    write.csv(res.old, file = paste("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/Test_051121/ABC_post_amppigs_",g,".csv",sep=""), row.names=FALSE)
   
-  colnames(tauoutput) <- c("tau", "ICombA", "ICombH","propres_amp", "ResPropHum") 
-  
-  return(c(distanceABC(list(sum.stats), data, 
-                       tauoutput[(!tauoutput$tau == UK_amp & !tauoutput$tau == 0),]),
-           abs(tauoutput$ICombH[tauoutput$tau == UK_amp] - 0.593),
-           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp] - 0.185),
-           abs(tauoutput$ICombA[tauoutput$tau == UK_amp] - 0.017173052),
-           abs(tauoutput$propres_amp[tauoutput$tau == UK_amp] - UK_amp)))
+    }
+  return(out)
 }
+
+# Running the Model Fit ---------------------------------------------------
+  
+cl <- makeCluster(7, type="SOCK")
+
+clusterEvalQ(cl, {c(library("rootSolve"), library("tmvtnorm"))})
+
+test <- ABC_algorithm(N = 100,
+                      G = 1,
+                      distanceABC = sum_square_diff_dist, 
+                      fitmodel = amrimp, 
+                      tau_range = melt_amp_pigs$Usage, 
+                      init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0), 
+                      data = melt_amp_pigs, 
+                      epsilon = list("dist" <-  c(2, 1.75, 1.5, 1.25, 1, 0.9),
+                                     "foodH" <- c(0.593, 0.593*0.75, 0.593*0.6, 0.593*0.5, 0.593*0.4, 0.593*0.2),
+                                     "AMRH" <-  c(0.185, 0.185*0.75, 0.185*0.6, 0.185*0.5, 0.185*0.4, 0.185*0.2),
+                                     "foodA" <- c(UK_cont, UK_cont*0.75, UK_cont*0.6, UK_cont*0.5, UK_cont*0.4, UK_cont*0.2),
+                                     "AMRA" <-  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.6, UK_amp_res*0.5, UK_amp_res*0.4, UK_amp_res*0.2)), 
+                      lm.low = c(0, 0, 0, 0, 0, 0, 0, 0), 
+                      lm.upp = c(0.035, 0.1, 10, 1, 0.005, 0.001, 0.01, 0.0002), 
+                      thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = UK_food_usage,
+                                    fracimp = EU_cont, propres_imp = EU_res))
+
+stopCluster(cl)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #Run the fit - This is where I will build the ABC-SMC Approach
-
-start_time <- Sys.time()
-
-#Where G is the number of generations
-prior.non.zero <- function(par){
-  prod(sapply(1:8, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
-}
-
 
 ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, init.state, times, data) {
   N_ITER_list <- list()
