@@ -5,7 +5,6 @@ rm(list=ls())
 #setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Data/Salmonella_Pigs")
 setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
-
 # Single Model ------------------------------------------------------------
 
 amrimp <- function(t, y, parms) {
@@ -87,7 +86,7 @@ country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 
-UK_amp_res <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",12:15], na.rm = T)
+UK_amp_res <- as.numeric(rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",12:15], na.rm = T))
 UK_amp_usage <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",17:19], na.rm = T)/1000
 UK_cont <- country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]
 UK_food_usage <- country_data_imp$Corrected_Usage_18[country_data_imp$Country_of_Origin == "UK Origin"]
@@ -130,7 +129,7 @@ computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm,
   colnames(tauoutput) <- c("tau", "IncH", "ICombA", "ResPropAnim", "ResPropHum")
   
   return(c(distanceABC(data, tauoutput[(!tauoutput$tau == UK_amp_usage & !tauoutput$tau == 0),]),
-           abs(tauoutput$ICombH[tauoutput$tau == UK_amp_usage] - 0.593),
+           abs(tauoutput$IncH[tauoutput$tau == UK_amp_usage] - 0.593),
            abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - 0.185),
            abs(tauoutput$ICombA[tauoutput$tau == UK_amp_usage] - UK_cont),
            abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
@@ -149,13 +148,13 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
     
     if(G == 1) {
       d_betaAA <- runif(1, min = 0, max = 0.035)
-      d_phi <- runif(1, min = 0, max = 0.1)
-      d_kappa <- runif(1, min = 0, max = 10)
+      d_phi <- runif(1, min = 0, max = 0.2)
+      d_kappa <- runif(1, min = 0, max = 20)
       d_alpha <- rbeta(1, 1.5, 8.5)
       d_zeta <- runif(1, 0, 0.005)
-      d_betaHD <- runif(1, 0, 0.001)
-      d_betaHH <- runif(1, 0, 0.01)
-      d_betaHI <- runif(1, 0, 0.0002)
+      d_betaHD <- runif(1, 0, 0.002)
+      d_betaHH <- runif(1, 0, 0.02)
+      d_betaHI <- runif(1, 0, 0.0004)
     } else { 
       p <- sample(seq(1,N),1,prob = w.old) # check w.old here
       par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp)
@@ -171,15 +170,16 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
     
     new.parms = c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI)
     
-  
     if(prior.non.zero(new.parms, lm.low, lm.upp)) {
       
       thetaparm[c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH", "betaHI")] <- new.parms
       
-      dist <- computeDistanceABC_ALEX(distanceABC, fitmodel, tau_range, thetaparm, init.state, data)
+      dist_mod <- computeDistanceABC_ALEX(distanceABC, fitmodel, tau_range, thetaparm, init.state, data)
       
-      if((dist[1] <= epsilon[["dist"]][G]) && (dist[2] <= epsilon[["foodH"]][G]) && (dist[3] <= epsilon[["AMRH"]][G]) && 
-         (dist[4] <= epsilon[["foodA"]][G]) && (dist[5] <= epsilon[["AMRA"]][G]) && (!is.na(dist))) {
+      print(dist_mod)
+      
+      if((dist_mod[1] <= epsilon[["dist"]][G]) && (dist_mod[2] <= epsilon[["foodH"]][G]) && (dist_mod[3] <= epsilon[["AMRH"]][G]) && 
+         (dist_mod[4] <= epsilon[["foodA"]][G]) && (dist_mod[5] <= epsilon[["AMRA"]][G]) && (!is.na(dist_mod))) {
         
         if(G==1){
           w.new <- 1
@@ -190,12 +190,11 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
           w.new <- w1/w2
         }
         i <- i + 1
-        return(list(dist, m, new.parms, w.new))
+        return(list(dist_mod, m, new.parms, w.new))
       }
     }
   }
 }
-
 
 # ABC-SMC Function --------------------------------------------------------
 
@@ -214,8 +213,6 @@ ABC_algorithm <- function(N, G, distanceABC, fitmodel, tau_range, init.state, da
     
     clusterExport(cl, varlist = c("amrimp", "computeDistanceABC_ALEX", "prior.non.zero", "sum_square_diff_dist",
                                   "melt_amp_pigs", "UK_amp_res", "UK_amp_usage", "UK_cont"))
-    
-    print("test")
     
     particles <- parLapply(cl, 
                            1:N, 
@@ -247,7 +244,6 @@ ABC_algorithm <- function(N, G, distanceABC, fitmodel, tau_range, init.state, da
     out[[g]] <- list(dat_nruns, dat_dist, res.old, w.old)
     colnames(res.old) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH", "betaHI")
     write.csv(res.old, file = paste("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/Test_051121/ABC_post_amppigs_",g,".csv",sep=""), row.names=FALSE)
-  
     }
   return(out)
 }
@@ -258,20 +254,20 @@ cl <- makeCluster(7, type="SOCK")
 
 clusterEvalQ(cl, {c(library("rootSolve"), library("tmvtnorm"))})
 
-test <- ABC_algorithm(N = 100,
-                      G = 1,
+test <- ABC_algorithm(N = 1000,
+                      G = 6,
                       distanceABC = sum_square_diff_dist, 
                       fitmodel = amrimp, 
                       tau_range = melt_amp_pigs$Usage, 
                       init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0), 
                       data = melt_amp_pigs, 
-                      epsilon = list("dist" <-  c(2, 1.75, 1.5, 1.25, 1, 0.9),
-                                     "foodH" <- c(0.593, 0.593*0.75, 0.593*0.6, 0.593*0.5, 0.593*0.4, 0.593*0.2),
-                                     "AMRH" <-  c(0.185, 0.185*0.75, 0.185*0.6, 0.185*0.5, 0.185*0.4, 0.185*0.2),
-                                     "foodA" <- c(UK_cont, UK_cont*0.75, UK_cont*0.6, UK_cont*0.5, UK_cont*0.4, UK_cont*0.2),
-                                     "AMRA" <-  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.6, UK_amp_res*0.5, UK_amp_res*0.4, UK_amp_res*0.2)), 
+                      epsilon = list("dist" =  c(3, 2, 1.75, 1.5, 1.25, 1),
+                                     "foodH" = c(0.593, 0.593*0.75, 0.593*0.5, 0.593*0.3, 0.593*0.2, 0.593*0.1),
+                                     "AMRH" =  c(0.185, 0.185*0.75, 0.185*0.5, 0.185*0.3, 0.185*0.2, 0.185*0.1),
+                                     "foodA" = c(UK_cont, UK_cont*0.75, UK_cont*0.5, UK_cont*0.3, UK_cont*0.2, UK_cont*0.1),
+                                     "AMRA" =  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.5, UK_amp_res*0.3, UK_amp_res*0.2, UK_amp_res*0.1)), 
                       lm.low = c(0, 0, 0, 0, 0, 0, 0, 0), 
-                      lm.upp = c(0.035, 0.1, 10, 1, 0.005, 0.001, 0.01, 0.0002), 
+                      lm.upp = c(0.035, 0.2, 20, 1, 0.005, 0.002, 0.02, 0.0004), 
                       thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = UK_food_usage,
                                     fracimp = EU_cont, propres_imp = EU_res))
 
@@ -279,181 +275,33 @@ stopCluster(cl)
 
 
 
+# Showing Posterior Dists -------------------------------------------------
 
+post_dist_names <- grep("ABC_post_amppigs_",
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/Test_051121"), value = TRUE)
 
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/Test_051121")
 
+post_dist <- lapply(post_dist_names, read.csv)
 
+post_dist <- mapply(cbind, post_dist, "gen" = sapply(1:length(post_dist), function(x) paste0("gen_", x)), 
+                    SIMPLIFY=F)
+post_dist <- do.call("rbind", post_dist)
 
+maps_est <- map_estimate(post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][,1:8])
 
+p_list <- list()
 
-
-
-
-
-
-
-
-
-#Run the fit - This is where I will build the ABC-SMC Approach
-
-ABC_algorithm <- function(N, G, sum.stats, distanceABC, fitmodel, tau_range, init.state, times, data) {
-  N_ITER_list <- list()
-  for(g in 1:G) {
-    i <- 1
-    dist_data <- data.frame(matrix(nrow = 1000, ncol = 6))
-    N_ITER <- 1
-    
-    while(i <= N) {
-      
-      N_ITER <- N_ITER + 1
-      if(g==1) {
-        d_betaAA <- runif(1, min = 0, max = 0.035)
-        d_phi <- runif(1, min = 0, max = 0.1)
-        d_kappa <- runif(1, min = 0, max = 10)
-        d_alpha <- rbeta(1, 1.5, 8.5)
-        d_zeta <- runif(1, 0, 0.005)
-        
-        d_betaHD <- runif(1, 0, 0.001)
-        d_betaHH <- runif(1, 0, 0.01)
-        d_betaHI <- runif(1, 0, 0.0002)
-        
-      } else{ 
-        p <- sample(seq(1,N),1,prob = w.old) # check w.old here
-        par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp, algorithm = "gibbs")
-        d_betaAA<-par[1]
-        d_phi<-par[2]
-        d_kappa<-par[3]
-        d_alpha<-par[4]
-        d_zeta <- par[5]
-        
-        d_betaHD <- par[6]
-        d_betaHH <- par[7]
-        d_betaHI <- par[8]
-      }
-      
-      if(prior.non.zero(c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI))) {
-        m <- 0
-        
-        thetaparm <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, tau = 0, psi = 0.656,
-                       
-                       fracimp = EU_cont,
-                       
-                       propres_imp = EU_res,
-                       
-                       betaAA = d_betaAA, betaHH = d_betaHH, betaHD = d_betaHD,
-                       betaHI = d_betaHI,
-                       
-                       phi = d_phi, kappa = d_kappa, alpha = d_alpha, zeta = d_zeta)
-        
-        dist <- computeDistanceABC_ALEX(sum.stats, distanceABC, fitmodel, tau_range, thetaparm, init.state, times, data)
-        print(dist)
-
-        if((dist[1] <= epsilon_dist[g]) && (dist[2] <= epsilon_foodH[g]) && (dist[3] <= epsilon_AMRH[g]) && 
-           (dist[4] <= epsilon_foodA[g]) && (dist[5] <= epsilon_AMRA[g]) && (!is.na(dist))) {
-          
-          # Store results
-          res.new[i,]<-c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHD, d_betaHH, d_betaHI) 
-          dist_data[i,] <- dist
-          print(res.new[i,])
-
-          
-          # Calculate weights
-          if(g==1){
-            
-            w.new[i] <- 1
-            
-          } else {
-            w1<-prod(c(sapply(c(1:3,5:8), function(b) dunif(res.new[i,b], min=lm.low[b], max=lm.upp[b])),
-                       dbeta(res.new[i,4], 1.5, 8.5))) 
-            w2<-sum(sapply(1:N, function(a) w.old[a]* dtmvnorm(res.new[i,], mean=res.old[a,], sigma=sigma, lower=lm.low, upper=lm.upp)))
-            w.new[i] <- w1/w2
-          }
-          # Update counter
-          print(paste0('Generation: ', g, ", particle: ", i,", weights: ", w.new[i]))
-          
-          i <- i+1
-        }
-      }
-    }#
-    N_ITER_list[[g]] <- list(N_ITER, dist_data)
-    sigma <- cov(res.new) 
-    res.old <- res.new
-    print(res.old)
-    w.old <- w.new/sum(w.new)
-    colnames(res.new) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHD", "betaHH","betaHI")
-    write.csv(res.new, file = paste("PART1_Simple_FIT_AMP_",g,".csv",sep=""), row.names=FALSE)
-    ####
-  }
-  return(N_ITER_list)
+for(i in 1:(length(post_dist)-1)) {
+  p_list[[i]] <- local ({
+    name_exp <- post_dist[,c(i,9)]
+    p <- ggplot(name_exp, aes(x= name_exp[,1], fill=gen)) + geom_density(alpha=.5) + 
+      geom_vline(xintercept = maps_est[i,2], size = 1.2, col = "red") +
+        scale_x_continuous(expand = c(0, 0), name = colnames(post_dist)[-9][i]) + 
+      scale_y_continuous(expand = c(0, 0)) +
+      theme(legend.text=element_text(size=14),axis.text=element_text(size=14),
+            axis.title.y=element_text(size=14),axis.title.x= element_text(size=14), plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
+    return(p)
+  })
 }
 
-N <- 1000 #(ACCEPTED PARTICLES PER GENERATION)
-
-lm.low <- c(0, 0, 0, 0, 0, 0, 0, 0)
-lm.upp <- c(0.035, 0.1, 10, 1, 0.005, 0.001, 0.01, 0.0002)
-
-# Empty matrices to store results (5 model parameters)
-res.old<-matrix(ncol=8,nrow=N)
-res.new<-matrix(ncol=8,nrow=N)
-
-# Empty vectors to store weights
-w.old<-matrix(ncol=1,nrow=N)
-w.new<-matrix(ncol=1,nrow=N)
-
-epsilon_dist <-  c(2, 1.75, 1.5, 1.25, 1, 0.9)
-epsilon_foodH <- c(3.26, 3.26*0.75, 3.26*0.6, 3.26*0.5, 3.26*0.4, 3.26*0.2)
-epsilon_AMRH <-  c(0.185, 0.185*0.75, 0.185*0.6, 0.185*0.5, 0.185*0.4, 0.185*0.2)
-epsilon_foodA <- c(0.017173052, 0.017173052*0.75, 0.017173052*0.6, 0.017173052*0.5, 0.017173052*0.4, 0.017173052*0.2)
-epsilon_AMRA <-  c(0.3333333, 0.3333333*0.75, 0.3333333*0.6, 0.3333333*0.5, 0.3333333*0.4, 0.3333333*0.2)
-
-dist_save <- ABC_algorithm(N = 1000, 
-                           G = 6,
-                           sum.stats = summarystatprev, 
-                           distanceABC = sum_square_diff_dist, 
-                           fitmodel = amrimp, 
-                           tau_range = country_data_gen$scaled_sales_amp, 
-                           init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, 
-                                          Sh = 1,
-                                          Ish = 0, Irh = 0), 
-                           times = seq(0, 2000, by = 50), 
-                           data = country_data_gen)
-
-end_time <- Sys.time(); end_time - start_time
-
-saveRDS(dist_save, file = "dist_simple_amp.rds")
-
-# Check Posterior ---------------------------------------------------------
-
-amp_post <- do.call(rbind,
-                    lapply(list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data", pattern = "Simple_FIT")[1:6], read.csv))
-amp_post$gen <- as.vector(sapply(1:6, 
-                                 function(x) rep(paste0("gen_",x), 1000)))
-
-l_amp_post <- lapply(1:length(colnames(amp_post)[-1]), function(x) melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[x])[,c(1,3)])
-
-names = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
-          expression(paste("Rate of Antibiotic-Resistant to Antibiotic-Sensitive Reversion (", phi, ")")),
-          expression(paste("Efficacy of Antibiotic-Mediated Animal Recovery (", kappa, ")")),
-          expression(paste("Transmission-related Antibiotic Resistant Fitness Cost (", alpha, ")")),
-          expression(paste("Background Infection Rate (", zeta, ")")),
-          expression(paste("Rate of Domestic Animal-to-Human Transmission (", beta[HD], ")")),
-          expression(paste("Rate of Domestic Human-to-Human Transmission (", beta[HH], ")")),
-          expression(paste("Rate of EU Animal-to-Human Transmission (", beta[HI], ")")))
-
-amp_p_list <- list()
-
-for(i in 1:length(names)){ 
-  amp_p_list[[i]] <- ggplot(l_amp_post[[i]], aes(x=value, fill= gen)) + geom_density(alpha=.5) + 
-    scale_x_continuous(expand = c(0, 0), name = names[i]) + 
-    scale_y_continuous(expand = c(0, 0), name = "") +
-    labs(fill = NULL) + scale_fill_discrete(labels = sapply(1:length(unique(amp_post$gen)), function(x) paste0("Generation ", x)))+
-    theme(legend.text=element_text(size=14),  axis.text=element_text(size=14),
-          axis.title.y=element_text(size=14),axis.title.x= element_text(size=14), plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"))
-}
-
-
-p_comb <- ggarrange(amp_p_list[[1]],amp_p_list[[2]],amp_p_list[[3]],amp_p_list[[4]],
-          amp_p_list[[5]],amp_p_list[[6]],amp_p_list[[7]],amp_p_list[[8]], ncol = 2, nrow = 4)
-
-ggsave(p_comb, filename = "post_simple.png",dpi = 300, type = "cairo", width = 12, height = 12, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
