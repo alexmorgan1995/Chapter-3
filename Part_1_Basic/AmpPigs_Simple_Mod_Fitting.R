@@ -148,13 +148,13 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
     
     if(G == 1) {
       d_betaAA <- runif(1, min = 0, max = 0.035)
-      d_phi <- runif(1, min = 0, max = 0.2)
-      d_kappa <- runif(1, min = 0, max = 20)
+      d_phi <- runif(1, min = 0, max = 0.5)
+      d_kappa <- runif(1, min = 0, max = 50)
       d_alpha <- rbeta(1, 1.5, 8.5)
       d_zeta <- runif(1, 0, 0.005)
-      d_betaHD <- runif(1, 0, 0.002)
-      d_betaHH <- runif(1, 0, 0.02)
-      d_betaHI <- runif(1, 0, 0.0004)
+      d_betaHD <- runif(1, 0, 0.01)
+      d_betaHH <- runif(1, 0, 0.05)
+      d_betaHI <- runif(1, 0, 0.01)
     } else { 
       p <- sample(seq(1,N),1,prob = w.old) # check w.old here
       par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp)
@@ -261,13 +261,13 @@ test <- ABC_algorithm(N = 1000,
                       tau_range = melt_amp_pigs$Usage, 
                       init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0), 
                       data = melt_amp_pigs, 
-                      epsilon = list("dist" =  c(3, 2, 1.75, 1.5, 1.25, 1),
+                      epsilon = list("dist" =  c(5, 5, 5, 5, 5, 5),
                                      "foodH" = c(0.593, 0.593*0.75, 0.593*0.5, 0.593*0.3, 0.593*0.2, 0.593*0.1),
                                      "AMRH" =  c(0.185, 0.185*0.75, 0.185*0.5, 0.185*0.3, 0.185*0.2, 0.185*0.1),
                                      "foodA" = c(UK_cont, UK_cont*0.75, UK_cont*0.5, UK_cont*0.3, UK_cont*0.2, UK_cont*0.1),
                                      "AMRA" =  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.5, UK_amp_res*0.3, UK_amp_res*0.2, UK_amp_res*0.1)), 
                       lm.low = c(0, 0, 0, 0, 0, 0, 0, 0), 
-                      lm.upp = c(0.035, 0.2, 20, 1, 0.005, 0.002, 0.02, 0.0004), 
+                      lm.upp = c(0.035, 0.5, 50, 1, 0.005, 0.01, 0.05, 0.01), 
                       thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = UK_food_usage,
                                     fracimp = EU_cont, propres_imp = EU_res))
 
