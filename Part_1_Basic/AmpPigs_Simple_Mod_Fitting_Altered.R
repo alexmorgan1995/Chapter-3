@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel")
 
 rm(list=ls())
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -39,6 +39,8 @@ amrimp <- function(t, y, parms) {
 #Import Data
 dataamp_pigs_raw <- read.csv("Amp_FatPigs_Comb.csv"); dataamp_pigs <- dataamp_pigs_raw
 dataamp_hum_raw <- read.csv("Hum_FatPigs.csv"); dataamp_hum <- dataamp_hum_raw
+
+UK_hum_ampres <- rowMeans(dataamp_hum_raw[dataamp_hum_raw$Country == "United Kingdom",][,27:30], na.rm = T)
 
 #Cleaning Data - Animals
 dataamp_pigs[,(2+5):(6+5)][dataamp_pigs[,2:6] < 10] <- NA #If N > 10, replace the particular country/year with NA for the No. of pos isolates
@@ -129,7 +131,7 @@ computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm,
   
   return(c(distanceABC(data, tauoutput[(!tauoutput$tau == UK_amp_usage & !tauoutput$tau == 0),]),
            abs(tauoutput$IncH[tauoutput$tau == UK_amp_usage] - 0.593),
-           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - 0.185),
+           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - UK_hum_ampres),
            abs(tauoutput$ICombA[tauoutput$tau == UK_amp_usage] - UK_cont),
            abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
 }
@@ -208,7 +210,7 @@ ABC_algorithm <- function(N, G, distanceABC, fitmodel, tau_range, init.state, da
     }
     
     clusterExport(cl, varlist = c("amrimp", "computeDistanceABC_ALEX", "prior.non.zero", "sum_square_diff_dist",
-                                  "melt_amp_pigs", "UK_amp_res", "UK_amp_usage", "UK_cont"))
+                                  "melt_amp_pigs", "UK_amp_res", "UK_amp_usage", "UK_cont", "UK_hum_ampres"))
     
     particles <- parLapply(cl, 
                            1:N, 
@@ -260,7 +262,7 @@ test <- ABC_algorithm(N = 250,
                       data = melt_amp_pigs, 
                       epsilon = list("dist" =  c(5, 5, 5, 5, 5, 5),
                                      "foodH" = c(0.593, 0.593*0.75, 0.593*0.5, 0.593*0.3, 0.593*0.2, 0.593*0.1),
-                                     "AMRH" =  c(0.185, 0.185*0.75, 0.185*0.5, 0.185*0.3, 0.185*0.2, 0.185*0.1),
+                                     "AMRH" =  c(UK_hum_ampres, UK_hum_ampres*0.75, UK_hum_ampres*0.5, UK_hum_ampres*0.3, UK_hum_ampres*0.2, UK_hum_ampres*0.1),
                                      "foodA" = c(UK_cont, UK_cont*0.75, UK_cont*0.5, UK_cont*0.3, UK_cont*0.2, UK_cont*0.1),
                                      "AMRA" =  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.5, UK_amp_res*0.3, UK_amp_res*0.2, UK_amp_res*0.1)), 
                       lm.low = c(0, 0, 0, 0, 0, 0, 0), 
