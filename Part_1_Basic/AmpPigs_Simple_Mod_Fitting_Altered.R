@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -80,7 +80,7 @@ ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country)) + geom_po
 
 # Food Usage Dataset ------------------------------------------------------
 
-country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/FullData_2021_v1_trim.csv") #This is data for pigs 
+country_data_imp <- read.csv("FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
@@ -152,7 +152,7 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
       d_kappa <- runif(1, min = 0, max = 100)
       d_alpha <- rbeta(1, 1.5, 8.5)
       d_zeta <- runif(1, 0, 0.005)
-      d_betaHD <- runif(1, 0, 0.05)
+      d_betaHD <- runif(1, 0, 0.1)
       d_betaHI <- runif(1, 0, 0.01)
     } else { 
       p <- sample(seq(1,N),1,prob = w.old) # check w.old here
@@ -264,7 +264,7 @@ test <- ABC_algorithm(N = 250,
                                      "foodA" = c(UK_cont, UK_cont*0.75, UK_cont*0.5, UK_cont*0.3, UK_cont*0.2, UK_cont*0.1),
                                      "AMRA" =  c(UK_amp_res, UK_amp_res*0.75, UK_amp_res*0.5, UK_amp_res*0.3, UK_amp_res*0.2, UK_amp_res*0.1)), 
                       lm.low = c(0, 0, 0, 0, 0, 0, 0), 
-                      lm.upp = c(0.035, 0.5, 100, 1, 0.005, 0.05, 0.01), 
+                      lm.upp = c(0.035, 0.5, 100, 1, 0.005, 0.1, 0.01), 
                       thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = UK_food_usage,
                                     fracimp = EU_cont, propres_imp = EU_res, eta = 0.0534))
 

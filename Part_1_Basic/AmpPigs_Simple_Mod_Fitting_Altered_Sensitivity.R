@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -75,7 +75,7 @@ melt_amp_pigs$Usage <- melt_amp_pigs$Usage/1000 #Change from mg/PCU to g/PCU
 
 # Food Usage Data ------------------------------------------------------
 
-country_data_imp <- read.csv("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/FullData_2021_v1_trim.csv") #This is data for pigs 
+country_data_imp <- read.csv("FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
 country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_2019/100
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
