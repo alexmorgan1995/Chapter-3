@@ -1,9 +1,10 @@
-library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
-library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel")
+library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); library("cowplot"); library("sensitivity")
+library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel"); library("lhs")
+library("Rcpp")
 
 rm(list=ls())
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -34,10 +35,13 @@ amrimp <- function(t, y, parms) {
   })
 }
 
-# Import General Data -------------------------------------------------------------
+# Livestock Dynamics Dataset ----------------------------------------------
+
 #Import Data
 dataamp_pigs_raw <- read.csv("Amp_FatPigs_Comb.csv"); dataamp_pigs <- dataamp_pigs_raw
 dataamp_hum_raw <- read.csv("Hum_FatPigs.csv"); dataamp_hum <- dataamp_hum_raw
+
+UK_hum_ampres <- rowMeans(dataamp_hum_raw[dataamp_hum_raw$Country == "United Kingdom",][,27:30], na.rm = T)
 
 #Cleaning Data - Animals
 dataamp_pigs[,(2+5):(6+5)][dataamp_pigs[,2:6] < 10] <- NA #If N > 10, replace the particular country/year with NA for the No. of pos isolates
@@ -73,7 +77,11 @@ melt_amp_pigs$upper_amp <- unlist(lapply(1:nrow(melt_amp_pigs), function(i) prop
 colnames(melt_amp_pigs) <- c("Country", "Year", "ResPropAnim", "Usage", "N", "IsolPos", "ResPropHum", "Lower_Amp", "Upper_Amp")
 melt_amp_pigs$Usage <- melt_amp_pigs$Usage/1000 #Change from mg/PCU to g/PCU
 
-# Food Usage Data ------------------------------------------------------
+ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country)) + geom_point() +
+  scale_x_continuous(expand = c(0, 0), limits = c(0,0.055)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
+  labs(x ="Livestock Antibiotic Usage (g/PCU)", y = "Antibiotic-Resistant Livestock Carriage")
+
+# Food Usage Dataset ------------------------------------------------------
 
 country_data_imp <- read.csv("FullData_2021_v1_trim.csv") #This is data for pigs 
 country_data_imp$Corrected_Usage_18 <- country_data_imp$Corrected_Usage_18/100
@@ -81,7 +89,7 @@ country_data_imp$Foodborne_Carriage_2019 <- country_data_imp$Foodborne_Carriage_
 country_data_imp[,12:13] <- country_data_imp[,12:13]/1000
 
 UK_amp_res <- as.numeric(rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",12:15], na.rm = T))
-UK_amp_usage <- rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",17:19], na.rm = T)/1000
+UK_amp_usage <- as.numeric(rowMeans(dataamp_pigs_raw[dataamp_pigs_raw$Country == "United Kingdom",17:19], na.rm = T)/1000)
 UK_cont <- country_data_imp$Foodborne_Carriage_2019[country_data_imp$Country_of_Origin == "UK Origin"]
 UK_food_usage <- country_data_imp$Corrected_Usage_18[country_data_imp$Country_of_Origin == "UK Origin"]
 
@@ -92,10 +100,20 @@ EU_res <- mean(country_data_imp$Prop_Amp_Res[2:10])
 
 # Import in Parameter MAPs ------------------------------------------------
 
-amp_post <- read.csv(paste0("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data/",
-                            tail(grep("Simple_FIT_AMP_",list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Data/fit_data"), value = TRUE), 1)))
+post_dist_names <- grep("ABC_post_amppigs_",
+                        list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data"), value = TRUE)
 
-MAP_amp <- data.frame("Parameter" = colnames(amp_post), "MAP_Estimate" = colMeans(amp_post))
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+
+post_dist <- lapply(post_dist_names, read.csv)
+
+post_dist <- mapply(cbind, post_dist, "gen" = sapply(1:length(post_dist), function(x) paste0("gen_", x)), 
+                    SIMPLIFY=F)
+post_dist <- do.call("rbind", post_dist)
+post_dist_gen <- post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][,1:7]
+
+maps_est <- map_estimate(post_dist_gen)
+maps_est <- data.frame("Parameter" = colnames(post_dist_gen), "MAP_Estimate" = colMeans(post_dist_gen))
 
 # Testing for Monotonicity - Identify Delta and Rel  -----------------------------------------------
 
@@ -105,24 +123,25 @@ parmdetails <- rbind(data.frame("Parameter" = "fracimp", "Value" = seq(0, 1, by 
                      data.frame("Parameter" = "psi", "Value" = seq(0, 1, by = 1/100)),
                      data.frame("Parameter" = "eta", "Value" = seq(0, 1, by = 1/100)),
                      
-                     data.frame("Parameter" = "betaAA", "Value" = seq(0, MAP_amp["betaAA",2]*10, by = MAP_amp["betaAA",2]*10/100)),
-                     data.frame("Parameter" = "betaHI", "Value" = seq(0, MAP_amp["betaHI",2]*10, by = MAP_amp["betaHI",2]*10/100)),
-                     data.frame("Parameter" = "betaHD", "Value" = seq(0, MAP_amp["betaHD",2]*10, by = MAP_amp["betaHD",2]*10/100)),
-                     data.frame("Parameter" = "phi", "Value" = seq(0, MAP_amp["phi",2]*10, by = MAP_amp["phi",2]*10/100)),
-                     data.frame("Parameter" = "kappa", "Value" = seq(0, MAP_amp["kappa",2]*10, by = MAP_amp["kappa",2]*10/100)),
+                     data.frame("Parameter" = "betaAA", "Value" = seq(0, maps_est["betaAA",2]*10, by = maps_est["betaAA",2]*10/100)),
+                     data.frame("Parameter" = "betaHI", "Value" = seq(0, maps_est["betaHI",2]*10, by = maps_est["betaHI",2]*10/100)),
+                     data.frame("Parameter" = "betaHD", "Value" = seq(0, maps_est["betaHD",2]*10, by = maps_est["betaHD",2]*10/100)),
+                     data.frame("Parameter" = "phi", "Value" = seq(0, maps_est["phi",2]*10, by = maps_est["phi",2]*10/100)),
+                     data.frame("Parameter" = "kappa", "Value" = seq(0, maps_est["kappa",2]*10, by = maps_est["kappa",2]*10/100)),
                      data.frame("Parameter" = "alpha", "Value" = seq(0, 1, by = 1/100)),
-                     data.frame("Parameter" = "zeta", "Value" = seq(0, MAP_amp["zeta",2]*10, by = MAP_amp["zeta",2]*10/100)),
+                     data.frame("Parameter" = "zeta", "Value" = seq(0, maps_est["zeta",2]*10, by = maps_est["zeta",2]*10/100)),
                      data.frame("Parameter" = "rh", "Value" = seq(0.01, 0.55^-1, by = 0.55^-1/100)),
                      data.frame("Parameter" = "ra", "Value" = seq(0, 6^-1, by = 6^-1/100)),
                      data.frame("Parameter" = "uh", "Value" = seq(0, 2883.5^-1, by = 2883.5^-1/100)),
                      data.frame("Parameter" = "ua", "Value" = seq(0, 24^-1, by = 24^-1/100)))
 
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
-tau_range <- c(0, UK_amp_usage)
+tau_range <- c(0, as.numeric(UK_amp_usage))
 
-parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = MAP_amp["betaAA",2],
-           betaHI = MAP_amp["betaHI",2], betaHD = MAP_amp["betaHD",2], phi = MAP_amp["phi",2], kappa = MAP_amp["kappa",2], alpha = 0.43, 
-           zeta = MAP_amp["zeta",2], psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, eta = 0.0534)
+parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = maps_est["betaAA",2],
+           betaHI = maps_est["betaHI",2], betaHD = maps_est["betaHD",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
+           alpha = maps_est["alpha",2], zeta = maps_est["zeta",2], psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, 
+           eta = 0.0534)
 
 suppplotlist <- list()
 
@@ -165,8 +184,8 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
     colnames(output)[1:10] <- c("FBD_H_0", "FBD_H_usage","Res_H_0", "Res_H_usage", "delta_FBD", "delta_Res","rel_FBD", "rel_Res", "ParmValue", "Parm")
     print(output)
     
-    plotnames <- c(bquote("fracimp"~Parameter), bquote("propresimp"~Parameter), bquote(psi~Parameter),
-                   bquote(beta["AA"]~Parameter), bquote(beta["HI"]~Parameter), bquote(beta["HD"]~Parameter), bquote(beta["HH"]~Parameter),
+    plotnames <- c(bquote("fracimp"~Parameter), bquote("propresimp"~Parameter), bquote(psi~Parameter), bquote(eta~Parameter),
+                   bquote(beta["AA"]~Parameter), bquote(beta["HI"]~Parameter), bquote(beta["HD"]~Parameter),
                    bquote(phi~Parameter), bquote(kappa~Parameter), bquote(alpha~Parameter), bquote(zeta~Parameter), bquote(r["H"]~Parameter), bquote(r["A"]~Parameter), 
                    bquote(mu["H"]~Parameter), bquote(mu["A"]~Parameter))[[j]]
     
@@ -190,6 +209,8 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
   })
 }
 
+
+
 #deltaFBD
 pdelta_FBD <- plot_grid(plot_grid(suppplotlist[[1]][[1]], suppplotlist[[2]][[1]], suppplotlist[[3]][[1]],suppplotlist[[4]][[1]], suppplotlist[[5]][[1]], 
                                   suppplotlist[[6]][[1]], suppplotlist[[7]][[1]], suppplotlist[[8]][[1]], suppplotlist[[9]][[1]], suppplotlist[[10]][[1]], suppplotlist[[11]][[1]],
@@ -208,27 +229,27 @@ prel_FBD <- plot_grid(plot_grid(suppplotlist[[1]][[3]], suppplotlist[[2]][[3]], 
 
 prel_res <- plot_grid(plot_grid(suppplotlist[[1]][[4]], suppplotlist[[2]][[4]], suppplotlist[[3]][[4]],suppplotlist[[4]][[4]], suppplotlist[[5]][[4]], 
                                   suppplotlist[[6]][[4]], suppplotlist[[7]][[4]], suppplotlist[[8]][[4]], suppplotlist[[9]][[4]], suppplotlist[[10]][[4]], suppplotlist[[11]][[4]],
-                                  suppplotlist[[12]][[4]], suppplotlist[[13]][[4]], suppplotlist[[14]][[4]],  suppplotlist[[14]][[4]],  nrow = 5, ncol =3), scale=0.95) + 
+                                  suppplotlist[[12]][[4]], suppplotlist[[13]][[4]], suppplotlist[[14]][[4]],  suppplotlist[[15]][[4]],  nrow = 5, ncol =3), scale=0.95) + 
   draw_label("rel_Res", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 ggsave(pdelta_res, filename = "delta_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
 ggsave(prel_FBD, filename = "rel_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 ggsave(prel_res, filename = "rel_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
 # LHS - Run Full Parameters ---------------------------------------------------------------------
 
 #First thing is to select how many times we want to sample (h) - this is based on the number of "partitions" in our distribution 
-parms = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
-          betaAA = MAP_amp["betaAA", 2],
-          betaHD = MAP_amp["betaHD", 2], betaHI = MAP_amp["betaHI", 2], phi = MAP_amp["phi", 2], 
-          kappa = MAP_amp["kappa", 2], alpha = MAP_amp["alpha", 2], zeta = MAP_amp["zeta", 2], 
-          psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, eta = 0.0534)
+
+parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = maps_est["betaAA",2],
+           betaHI = maps_est["betaHI",2], betaHD = maps_est["betaHD",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
+           alpha = maps_est["alpha",2], zeta = maps_est["zeta",2], psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, 
+           eta = 0.0534)
 
 #This is without tau
 
@@ -240,17 +261,17 @@ lhs <- maximinLHS(h, length(parms))
 #the qnorm function - you give it a probability (from the LHS matrix) - put in the parameters of the distribution - and then it gives you the  
 
 parmdetails <- data.frame("parms" = c("ra", "rh" ,"ua", "uh",
-                                      "betaAA" ,"betaHH" ,"betaHD" ,"betaHI",
+                                      "betaAA","betaHD" ,"betaHI",
                                       "phi", "kappa", "alpha", "zeta", 
-                                      "psi", "fracimp" , "propres_imp" ),
+                                      "psi", "fracimp" , "propres_imp", "eta" ),
                           "lbound" = c(600^-1, 55^-1, 2400^-1, 288350^-1, 
-                                       parms[["betaAA"]]/10, parms[["betaHH"]]/10, parms[["betaHD"]]/10,  parms[["betaHI"]]/10, 
+                                       parms[["betaAA"]]/10, parms[["betaHD"]]/10,  parms[["betaHI"]]/10, 
                                        parms[["phi"]]/10, parms[["kappa"]]/10, 0, parms[["zeta"]]/10,
-                                       0, 0, 0),
+                                       0, 0, 0, 0),
                           "ubound" = c(6^-1, 0.55^-1, 24^-1, 2883.5^-1, 
-                                        parms[["betaAA"]]*10, parms[["betaHH"]]*10, parms[["betaHD"]]*10,  parms[["betaHI"]]*10, 
+                                        parms[["betaAA"]]*10, parms[["betaHD"]]*10,  parms[["betaHI"]]*10, 
                                         parms[["phi"]]*10, parms[["kappa"]]*10, 1, parms[["zeta"]]*10,
-                                        1, 1, 1))
+                                        1, 1, 1 , 1))
 
 #I want to multiply each column with the difference between the lower and upperbound for the particular parameter of interest 
 
@@ -270,12 +291,12 @@ for(i in 1:h) {
   parmslhs <- as.list(lhsscaled[i,])
   
   for(j in 1:2) { 
-    parmslhstau <- c(parmslhs, "tau" =  c(0, UK_amp)[j])
+    parmslhstau <- c(parmslhs, "tau" =  c(0, UK_amp_usage)[j])
     
     out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parmslhstau)
-    
-    temptau[j,] <- c((rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000,
-              rounding(out[nrow(out),7])/ (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7])))
+
+    temptau[j,] <- c(((out[[2]] + out[[3]])*(446000000))/100000,
+                     out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
 
     print(temptau)
   }
@@ -327,7 +348,7 @@ PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(PRCC_plot, filename = "LHS_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
 #Plotting rel_FBD PRCC
 plotrel_fbd <- data.frame("parm" = rownames(prcc_fbd_rel[[7]]), as.data.frame(prcc_fbd_rel[[7]]))
@@ -356,33 +377,31 @@ PRCC_plot <- ggarrange(p_relfbd, p_relres, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(PRCC_plot, filename = "LHS_PRCC_rel.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
 # AMR Wrapper Function - for eFAST ----------------------------------------------------
 
 ode_function_relfbd <- function(x) {
-  times <- seq(0,3000, by = 10) 
   init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
-  tau_range <- c(0, UK_amp)
+  tau_range <- c(0, UK_amp_usage)
   return_vec <- vector()
   
   for(z in 1:nrow(x)) {
     
     parms = c(ra = x[z,1], rh = x[z,2], ua = x[z,3], uh = x[z,4], 
-                       betaAA = x[z,5], betaHH = x[z,6],
-                       betaHD = x[z,7], betaHI = x[z,8], phi = x[z,9], 
-                       kappa = x[z,10], alpha = x[z,11], zeta = x[z,12], 
-                       psi = x[z,13], fracimp = x[z,14], propres_imp = x[z,15])
+                       betaAA = x[z,5], 
+                       betaHD = x[z,6], betaHI = x[z,7], phi = x[z,8], 
+                       kappa = x[z,9], alpha = x[z,10], zeta = x[z,11], 
+                       psi = x[z,12], fracimp = x[z,13], propres_imp = x[z,14], eta = x[z,15])
     print(paste0(round(z/nrow(x), digits  = 3)*100,"%"))
     temp1 <- matrix(nrow = 2, ncol = 2)
     
     for (i in 1:length(tau_range)) {
-      temp <- vector()
       parmstemp <- c(parms, tau = tau_range[i])
-      out <- ode(y = init, func = amrimp, times = times, parms = parmstemp)
-      temp[1] <- (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000
-      temp[2] <- rounding(out[nrow(out),7])/(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))
-      temp1[i,] <- temp
+      out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parmstemp)
+
+      temp1[i,] <-  c(((out[[2]] + out[[3]])*(446000000))/100000,
+                     out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
     }
     return_vec[z] <- as.numeric(temp1[1,1]/temp1[2,1])
   }
@@ -392,33 +411,28 @@ ode_function_relfbd <- function(x) {
 }
 
 ode_function_relres <- function(x) {
-  times <- seq(0,3000, by = 10) 
   init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
-  tau_range <- c(0, UK_amp)
-  print(x)
-  
+  tau_range <- c(0, UK_amp_usage)
   return_vec <- vector()
   
   for(z in 1:nrow(x)) {
     
     parms = c(ra = x[z,1], rh = x[z,2], ua = x[z,3], uh = x[z,4], 
-                       betaAA = x[z,5], betaHH = x[z,6],
-                       betaHD = x[z,7], betaHI = x[z,8], phi = x[z,9], 
-                       kappa = x[z,10], alpha = x[z,11], zeta = x[z,12], 
-                       psi = x[z,13], fracimp = x[z,14], propres_imp = x[z,15])
+              betaAA = x[z,5], 
+              betaHD = x[z,6], betaHI = x[z,7], phi = x[z,8], 
+              kappa = x[z,9], alpha = x[z,10], zeta = x[z,11], 
+              psi = x[z,12], fracimp = x[z,13], propres_imp = x[z,14], eta = x[z,15])
     print(paste0(round(z/nrow(x), digits  = 3)*100,"%"))
-    print(paste0(round(z/nrow(x), digits  = 3)*100,"%"))
-    
     temp1 <- matrix(nrow = 2, ncol = 2)
     
     for (i in 1:length(tau_range)) {
-      temp <- vector()
       parmstemp <- c(parms, tau = tau_range[i])
-      out <- ode(y = init, func = amrimp, times = times, parms = parmstemp)
-      temp[1] <- (rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))*100000
-      temp[2] <- rounding(out[nrow(out),7])/(rounding(out[nrow(out),6]) + rounding(out[nrow(out),7]))
-      temp1[i,] <- temp
+      out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parmstemp)
+      
+      temp1[i,] <-  c(((out[[2]] + out[[3]])*(446000000))/100000,
+                      out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
     }
+    
     return_vec[z] <- 1 - (as.numeric(temp1[1,2]/temp1[2,2]))
     
     if(is.nan(temp1[1,2]/temp1[2,2])) {
@@ -435,10 +449,10 @@ ode_function_relres <- function(x) {
 # eFAST - Run the Model -------------------------------------------------------------------
 
 factors <- c("ra", "rh", "ua", "uh", 
-             "betaAA", "betaHH",
+             "betaAA",
              "betaHD", "betaHI", "phi", 
              "kappa", "alpha", "zeta",
-             "psi", "fracimp", "propres_imp")
+             "psi", "fracimp", "propres_imp", "eta")
 
 start_time <- Sys.time()
 
@@ -448,13 +462,13 @@ testfbd <- fast99(model = ode_function_relfbd, factors = factors, n = 1000,
                                list(min=2400^-1, max=24^-1),
                                list(min=288350^-1, max=2883.5^-1),
                                list(min=parms[["betaAA"]]/10, max=parms[["betaAA"]]*10),
-                               list(min=parms[["betaHH"]]/10, max=parms[["betaHH"]]*10),
                                list(min=parms[["betaHD"]]/10, max=parms[["betaHD"]]*10),
                                list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
                                list(min=0.001, max=1),
                                list(min=parms[["zeta"]]/10, max=parms[["zeta"]]*10),
+                               list(min=0.001, max=1),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1)))
@@ -465,13 +479,13 @@ testres <- fast99(model = ode_function_relres, factors = factors, n = 1000,
                                list(min=2400^-1, max=24^-1),
                                list(min=288350^-1, max=2883.5^-1),
                                list(min=parms[["betaAA"]]/10, max=parms[["betaAA"]]*10),
-                               list(min=parms[["betaHH"]]/10, max=parms[["betaHH"]]*10),
                                list(min=parms[["betaHD"]]/10, max=parms[["betaHD"]]*10),
                                list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
                                list(min=0.001, max=1),
                                list(min=parms[["zeta"]]/10, max=parms[["zeta"]]*10),
+                               list(min=0.001, max=1),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1),
                                list(min=0.001, max=1)))
@@ -521,7 +535,8 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20), common.legend = TRUE,
                        legend = "bottom") 
 
-ggsave(PRCC_plot, filename = "eFAST_relative.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in")
+ggsave(PRCC_plot, filename = "eFAST_relative.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
 #### Combined plot for the RelRes Measure ####
 
@@ -532,5 +547,5 @@ p_efast_res <- p_efast_res + labs(title = bquote(bold("eFAST total/first order s
 comb_relres <- ggarrange(p_relres, p_efast_res, nrow = 2, ncol = 1)
   
 ggsave(comb_relres, filename = "sens_PRCC_eFAST_relres.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 

@@ -12,8 +12,8 @@ amrimp <- function(t, y, parms) {
     
     dSa = ua + ra*(Isa + Ira) + kappa*tau*Isa - (betaAA*Isa*Sa) - (1-alpha)*(betaAA*Ira*Sa) - ua*Sa -
       0.5*zeta*Sa*(1-alpha) - 0.5*zeta*Sa 
-    dIsa = betaAA*Isa*Sa + phi*Ira - kappa*tau*Isa - tau*Isa - ra*Isa - eta*ua*Isa + 0.5*zeta*Sa
-    dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - eta*ua*Ira + 0.5*zeta*Sa*(1-alpha)
+    dIsa = betaAA*Isa*Sa + phi*Ira - kappa*tau*Isa - tau*Isa - ra*Isa - ua*Isa + 0.5*zeta*Sa
+    dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + 0.5*zeta*Sa*(1-alpha)
     
     dSh = uh + rh*(Ish+Irh) - 
       psi*(betaHD*(Isa*eta)*Sh) - 
