@@ -246,15 +246,16 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
 
 #Function for the Import %
 
-thetaparm["psi"] <- 1
-thetaparm[25:34] <- 0.75
-thetaparm["imp_nEU"] <- 0.75
+thetaparm["psi"] <- 0.9
+thetaparm[25:34] <- 0.1
+thetaparm["imp_nEU"] <- 0.1
 
 for(i in 1:2){
   thetaparm["tau"] <- c(0, UK_amp_usage)[i]
   out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
   print(sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
 }
+
 
 
 

@@ -3,6 +3,7 @@ library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -199,9 +200,10 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump")
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
@@ -250,6 +252,7 @@ usage_threshold <- c(seq(0, 1, by = 0.02), 0.656)
 import_res_func <- function(parms, init, usage_threshold, uk_usage) {
   parmtau1 <- c(0, UK_amp_usage)
   usage_frame <- data.frame(matrix(nrow = length(usage_threshold), ncol = 2))
+  
   for(x in 1:length(usage_threshold)) {
     parms[["psi"]] <- usage_threshold[x]
     output1 <- data.frame(matrix(nrow = 2, ncol =3))
@@ -273,7 +276,7 @@ import_res_func <- function(parms, init, usage_threshold, uk_usage) {
   }
   
   colnames(usage_frame) <- c("relchange", "domusage")
-  usage_frame$relchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
+  usage_frame$normchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
   
   return(usage_frame)
 }
@@ -329,36 +332,53 @@ for(j in 1:3){
 #Plot the Incremental Analysis 
 p_incr_list <- list()
 
-c(amp_res_data_incr[,1], amp_cont_data_incr[,1])*100
-
-
 for(i in 1:2) {
   p_incr_list[[i]] <- local ({
     
-    data <- as.data.frame(cbind(sapply(data_imp_list_incr[[i+1]], "[[", 1)))
+    data <- as.data.frame(cbind(sapply(data_imp_list_incr[[i+1]], "[[", 1))) # the 1 at the end refers to either normalised or un-normalised change in FBD
     colnames(data) <- sapply((list(amp_cont_data_incr[,1], amp_res_data_incr[,1])[[i]])*100, function(x) paste0(x, "%"))
     data$Baseline <- data_imp_list_incr[[1]][,1]
     data$usage <- c(seq(0, 1, by = 0.02), 0.656)
-
-    plot_cont <- melt(data, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
     
+    plot_cont <- melt(data, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
+    print(max(plot_cont$value, na.rm = T)*1.2)
     p_incr <- ggplot(plot_cont, aes(x = usage, y = value, col = variable, size = variable, lty = variable)) + geom_line() +
       scale_color_manual(values = c(viridis::viridis((ncol(data)-2)), "red")) + 
+      geom_vline(xintercept = 0.656, size = 2, col = "hotpink" , alpha = 0.6) + 
       scale_size_manual(values = c(rep(1, (ncol(data)-2)), 2)) + 
-      scale_linetype_manual(values = c(rep(1, (ncol(data)-2)), 2)) + 
+      scale_linetype_manual(values = c(rep(1, (ncol(data)-2)), 2)) + theme_bw() + 
       theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
             axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
             legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins", 
-                                                       y = "Reduction in the Efficacy of Livestock Antibiotic Stewardship", 
+                                                       y = "Reduction in Human Resistance due to Curtailment", 
                                                        color = c("Proportion Contaminated", "Proportion Resistant")[i]) +
-      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0)) + guides(size= "none", linetype = "none")
-    
-    #ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res")[i] ,".png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
-    #       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
-    
-    return(p_incr)
+      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.2)) + guides(size= "none", linetype = "none") 
+  
+  #ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res")[i] ,".png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
+  #       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+  
+  return(p_incr)
   })
 }
+
+
+# Testing -----------------------------------------------------------------
+
+output <- data.frame()
+
+for(i in 1:length(data_imp_list_incr[[2]])) {
+  temp <- data_imp_list_incr[[2]][[i]]
+  temp$normchange <- (temp$relchange / temp$relchange[temp$domusage == 0.656]) * 100
+  temp$group <- as.factor(seq(0,0.3, by = 0.02)[i])
+  print(temp)
+  output <- rbind(output, temp)
+}
+
+output[output$domusage == 0.656,]
+
+ggplot(output, aes(y= normchange,x = domusage, col = group)) + geom_line()
+
+ggplot(output, aes(y= relchange ,x = domusage, col = group)) + geom_line()
 
 # Plotting Baseline Model -------------------------------------------------
 
