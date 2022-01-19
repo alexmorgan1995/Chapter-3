@@ -91,108 +91,113 @@ UK_amp_usage <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_O
 UK_cont <- as.numeric(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",24])
 UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
 
+UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
+UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",4]
+
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
 EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
 EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
-#### Approximate Bayesian Computation - SMC ####
+# Import Fitted Parameters ------------------------------------------------
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
 
-prior.non.zero<-function(par, lm.low, lm.upp){
-  prod(sapply(1:7, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
-}
-
-#Return the sum of squares between resistance and the model output
-sum_square_diff_dist <- function(data.obs, model.obs) {
-  sumsquare <- (data.obs$ResPropAnim - model.obs$ResPropAnim)^2
-  return(sum(sumsquare))
-}
-
-#Compute the distances for all 3 summary statistics - this section involves running the model
-computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
-  tauoutput <- data.frame(matrix(nrow = length(tau_range), ncol = 5))
-  tau_range <- append(tau_range, UK_amp_usage)
-  parms2 = thetaparm
+import <- function(id) {
+  data <- data.frame(matrix(ncol = 9, nrow = 0))
   
-  for (i in 1:length(tau_range)) {
-    
-    parms2["tau"] = tau_range[i]
-    out <- runsteady(y = init.state, func = fitmodel, times = c(0, Inf), parms = parms2)
-    
-    tauoutput[i,] <- c(tau_range[i],
+  for(i in 1:length(grep(paste0("amppigs_",id), list.files(), value = TRUE))) {
+    test  <- cbind(read.csv(paste0("ABC_post_amppigs_",substitute(id),"_",i,".csv"), 
+                            header = TRUE), "group" = paste0("data",i), "fit" = as.character(substitute(id)))
+    data <- rbind(data, test)
+  }
+  return(data)
+}
+
+data <- list(import("gen"), import("pig"))
+lapply(1:2, function(x) data[[x]]$group = factor(data[[x]]$group, levels = unique(data[[x]]$group)))
+
+map_list <- list()
+
+for(i in 1:2) {
+  temp <- data[[i]] 
+  tail(temp$group, 1)
+  map_list[[i]] <- data.frame("Parameters" = colnames(temp[temp$group == tail(temp$group, 1),][1:7]), 
+                              "MAP_Estimate" = colMeans(temp[temp$group == tail(temp$group, 1),][1:7]))
+}
+
+# Run Model --------------------------------------------------------------
+
+#Baseline 
+
+parmtau <- seq(0,0.01, by = 0.0005)
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+
+plot_list <- list()
+
+for(j in 1:2) {
+  
+  MAP_amp <- map_list[[j]]
+  
+  parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
+             
+             betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], tau = 0,
+             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], 
+             phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
+             kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], 
+             zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
+             psi = c(UK_food_usage, UK_food_pig_usage)[j], fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
+  
+  tauoutput <- data.frame(matrix(nrow = length(parmtau), ncol = 7))
+  
+  for (i in 1:length(parmtau)) {
+    parms2["tau"] = parmtau[i]
+    out <-  runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
+    tauoutput[i,] <- c(parmtau[i],
+                       (out[[2]]*(446000000))/100000,
+                       (out[[3]]*(446000000))/100000,
                        ((out[[2]] + out[[3]])*(446000000))/100000,
                        (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
                        out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
                        out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
   }
   
-  colnames(tauoutput) <- c("tau", "IncH", "ICombA", "ResPropAnim", "ResPropHum")
+  colnames(tauoutput) <- c("tau", "InfHumans", "ResInfHumans","ICombH", "ICombA", "IResRatA","IResRat")
+  tauoutput$group <-  c("gen", "pig")[j]
   
-  return(c(distanceABC(data, tauoutput[(!tauoutput$tau == UK_amp_usage & !tauoutput$tau == 0),]),
-           abs(tauoutput$IncH[tauoutput$tau == UK_amp_usage] - 0.593),
-           abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - UK_hum_ampres),
-           abs((tauoutput$ICombA[tauoutput$tau == UK_amp_usage]*parms2[["eta"]]) - UK_cont),
-           abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
+  plotdata <- melt(tauoutput,
+                   id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
+  
+  p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
+    geom_vline(xintercept = UK_amp_usage, alpha = 0.3, size = 2) + 
+    geom_col(color = "black",position= "stack", width  = 0.0005) + scale_x_continuous(expand = c(0, 0.0005)) + 
+    scale_y_continuous(limits = c(0,1), expand = c(0, 0))  + 
+    geom_text(label= c(round(tauoutput$IResRat, digits = 2), rep("",length(parmtau))), vjust=-0.5, hjust = 0.05,
+              position = "stack", angle = 45) +
+    theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
+          axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+          legend.spacing.x = unit(0.3, 'cm')) + 
+    scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
+    labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
+  
+  plot_list[[j]] <- list(tauoutput, p_base)
 }
 
-# Import Fitted Parameters ------------------------------------------------
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
+p_base <- plot_list[[1]][[2]]
+ggsave(p_base, filename = "baseplot_gen.png", dpi = 300, type = "cairo", width = 10, height = 6, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1", pattern = "ABC_post"), 1))
-MAP_amp <- map_estimate(post_amp)
-MAP_amp <- data.frame("Parameters" = colnames(post_amp), "MAP_Estimate" = colMeans(post_amp))
+p_pig <- plot_list[[2]][[2]]
+ggsave(p_pig, filename = "baseplot_pigs.png", dpi = 300, type = "cairo", width = 10, height = 6, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
-# Run Model --------------------------------------------------------------
-
-#Baseline 
-
-parmtau <- seq(0,0.05, by = 0.001)
-init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
-
-tauoutput <- data.frame(matrix(nrow = length(parmtau), ncol =7))
-
-for (i in 1:length(parmtau)) {
-  
-  parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
-             
-             betaAA = 0.2, tau = parmtau[i],
-             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], phi = 0.1, 
-             kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = 0.3, zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
-             psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, eta = 0.028653)
-  
-  out <-  runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
-  tauoutput[i,] <- c(parmtau[i],
-                     (out[[2]]*(446000000))/100000,
-                     (out[[3]]*(446000000))/100000,
-                     ((out[[2]] + out[[3]])*(446000000))/100000,
-                     (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
-                     out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
-                     out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
-}
-
-
-colnames(tauoutput) <- c("tau", "InfHumans", "ResInfHumans","ICombH", "ICombA", "IResRat","IResRatA")
-
-plotdata <- melt(tauoutput,
-                 id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
-
-p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
-  geom_vline(xintercept = UK_amp_usage, alpha = 0.3, size = 2) + 
-  geom_col(color = "black",position= "stack", width  = 0.001) + scale_x_continuous(expand = c(0, 0.0005)) + 
-  scale_y_continuous(limits = c(0,1), expand = c(0, 0))  + 
-  geom_text(label= c(round(tauoutput$IResRat, digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
-            position = "stack", angle = 45) +
-  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) + 
-  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
-  labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
-
-
-ggplot(tauoutput, aes(x = tau, y = ICombA*0.11)) + theme_bw() + geom_line()
-ggplot(tauoutput, aes(x = tau, y = ICombH)) + theme_bw() + geom_line()
-ggplot(tauoutput, aes(x = tau, y = IResRat)) + theme_bw() + geom_line()
-ggplot(tauoutput, aes(x = tau, y = IResRatA)) + theme_bw() + geom_line()
+ggplot(tauoutput, aes(x = tau, y = ICombA*0.11)) + theme_bw() + geom_line() + 
+  geom_point(aes(x = UK_amp_usage, y = UK_cont), size = 2, col = "red")
+ggplot(tauoutput, aes(x = tau, y = ICombH)) + theme_bw() + geom_line()+ 
+  geom_point(aes(x = UK_amp_usage, y = 0.593), size = 2, col = "red")
+ggplot(tauoutput, aes(x = tau, y = IResRat)) + theme_bw() + geom_line()+ 
+  geom_point(aes(x = UK_amp_usage, y = UK_hum_ampres), size = 2, col = "red")
+ggplot(tauoutput, aes(x = tau, y = IResRatA)) + theme_bw() + geom_line() + scale_y_continuous(limits = c(0,1)) + scale_x_continuous(limits = c(0,0.05))+ 
+  geom_point(aes(x = UK_amp_usage, y = UK_amp_res), size = 2, col = "red")
 
 # Diagnostics Distance Measures  -------------------------------------------------------------
 
@@ -228,6 +233,8 @@ computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm,
            abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
 }
 
+MAP_amp <- map_list[[1]]
+
 dist_mod <- computeDistanceABC_ALEX(sum_square_diff_dist, 
                                     amrimp, 
                                     melt_amp_pigs$Usage, 
@@ -235,14 +242,175 @@ dist_mod <- computeDistanceABC_ALEX(sum_square_diff_dist,
                                                   betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], betaHH = MAP_amp[MAP_amp$Parameter == "betaHH", 2]*0.4, tau = parmtau[i],
                                                   betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
                                                   kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2],
-                                                  fracimp = EU_cont, propres_imp = EU_res, eta = 0.028653), 
+                                                  fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016), 
                                     init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0), 
                                     melt_amp_pigs)
 
 
 # Model Fit ---------------------------------------------------------------
 
-ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country)) + geom_point() +
-  scale_x_continuous(expand = c(0, 0), limits = c(0,0.055)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
-  labs(x ="Livestock Antibiotic Usage (g/PCU)", y = "Antibiotic-Resistant Livestock Carriage") + 
-  geom_line(data = tauoutput, aes(x = tau, y= IResRatA), inherit.aes = F)
+start_time <- Sys.time()
+
+parmtau <- seq(0,0.08, by = 0.004)
+
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+icombhdata <- data.frame(matrix(ncol = 3, nrow = 0))
+ribbon_final <- data.frame()
+
+for(j in 1:2) {
+  t_data <- data[[j]]
+  t_data_gen8 <- t_data[t_data$group == tail(t_data$group, 1),][1:7]
+  
+  map_amp <- map_list[[j]]
+  output1 <- data.frame(matrix(NA, nrow = length(parmtau), ncol = 3))
+  output_ribbon <- data.frame()
+  
+  for (i in 1:length(parmtau)) {
+    
+    temp_ribbon <- data.frame(matrix(NA, nrow = nrow(t_data_gen8), ncol=3))
+    
+    parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
+               betaAA = map_amp["betaAA",2], tau = parmtau[i],
+               betaHD = map_amp["betaHD",2], betaHI = map_amp["betaHI",2], 
+               phi = map_amp["phi",2], 
+               kappa = map_amp["kappa",2], alpha = map_amp["alpha",2], 
+               zeta = map_amp["zeta",2], 
+               psi = c(UK_food_usage, UK_food_pig_usage)[j], fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
+    
+    out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
+    output1[i,1] <- parmtau[i]
+    output1[i,2] <- ((out[[2]] + out[[3]])*(446000000))/100000
+    output1[i,3] <- out$y["Ira"] / (out$y["Isa"] + out$y["Ira"])
+    output1$group <- c("gen", "pig")[j]
+    
+    for(z in 1:nrow(t_data_gen8)) {
+      
+      parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
+                 betaAA = t_data_gen8[z, "betaAA"], tau = parmtau[i],
+                 betaHD = t_data_gen8[z, "betaHD"], betaHI = t_data_gen8[z, "betaHI"], 
+                 phi = t_data_gen8[z, "phi"], 
+                 kappa = t_data_gen8[z, "kappa"], alpha = t_data_gen8[z, "alpha"], 
+                 zeta = t_data_gen8[z, "zeta"], 
+                 psi = c(UK_food_usage, UK_food_pig_usage)[j], fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
+
+      out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
+      temp_ribbon[z,1] <- parmtau[i]
+      temp_ribbon[z,2] <- z
+      temp_ribbon[z,3] <- out$y["Ira"] / (out$y["Isa"] + out$y["Ira"])
+      temp_ribbon$group <- c("gen", "pig")[j]
+      
+      print(paste0(c("gen", "pig")[j], ", tau: ", temp_ribbon[z,1], ", ", (z/nrow(t_data_gen8))*100, "%"))
+    }
+    output_ribbon <- rbind.data.frame(output_ribbon, temp_ribbon)
+  }
+  icombhdata <- rbind(icombhdata, output1)
+  ribbon_final <- rbind(ribbon_final, output_ribbon)
+}
+
+colnames(icombhdata)[1:4] <- c("tau", "ICombH","IResRatA","group")
+colnames(ribbon_final)[1:4] <- c("tau","particle","IResRatA", "group")
+
+HDI_ribbon <- data.frame()
+for(j in 1:length(unique(ribbon_final$group))) {
+  for(i in 1:length(unique(ribbon_final$tau))) {
+    HDI_ribbon <- rbind(HDI_ribbon, 
+                        data.frame("tau" = unique(ribbon_final$tau)[i],
+                                   "lowHDI" = hdi(ribbon_final$IResRatA[ribbon_final$tau == unique(ribbon_final$tau)[i] & ribbon_final$group == unique(ribbon_final$group)[j]], credMass = 0.95)[[2]],
+                                   "highHDI" = hdi(ribbon_final$IResRatA[ribbon_final$tau == unique(ribbon_final$tau)[i] & ribbon_final$group == unique(ribbon_final$group)[j]], credMass = 0.95)[[3]],
+                                   "scen" = unique(ribbon_final$group)[j]))
+  }
+}
+
+end_time <- Sys.time(); end_time - start_time
+
+#Plots 
+
+model_fit_gen <- ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country))  + geom_point() + theme_bw() + 
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
+  labs(x ="Ampicillin Usage in Fattening Pigs (g/PCU)", y = "Ampicillin-Resistant Fattening Pig Carriage") +
+  geom_line(data = icombhdata[icombhdata$group == "gen",], aes(x = tau, y= IResRatA), col = "purple", size = 1.1) +
+  geom_ribbon(data = HDI_ribbon[HDI_ribbon$scen == "gen",],
+              aes(x = tau ,ymin = lowHDI, ymax = highHDI), fill = "hotpink", alpha = 0.7, inherit.aes=FALSE) +
+  theme(legend.text=element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm"),
+        legend.position = "right") + 
+  coord_cartesian(xlim = c(0,max(melt_amp_pigs$Usage)*1.05)) +
+geom_errorbar(aes(ymin=Lower_Amp , ymax=Upper_Amp, color = Country),  size=1.01, inherit.aes =  TRUE) + 
+  geom_point(x = UK_amp_usage, y = UK_amp_res, size = 5, col = "red", shape  = 22, fill = "red", alpha = 0.1)
+
+model_fit_pig <- ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Country))  + geom_point() + theme_bw() + 
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) +
+  labs(x ="Ampicillin Usage in Fattening Pigs (g/PCU)", y = "Ampicillin-Resistant Fattening Pig Carriage") +
+  geom_line(data = icombhdata[icombhdata$group == "pig",], aes(x = tau, y= IResRatA), col = "purple", size = 1.1) +
+  geom_ribbon(data = HDI_ribbon[HDI_ribbon$scen == "pig",],
+              aes(x = tau ,ymin = lowHDI, ymax = highHDI), fill = "hotpink", alpha = 0.7, inherit.aes=FALSE) +
+  theme(legend.text=element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm"),
+        legend.position = "right") + 
+  coord_cartesian(xlim = c(0,max(melt_amp_pigs$Usage)*1.05)) +
+  geom_errorbar(aes(ymin=Lower_Amp , ymax=Upper_Amp, color = Country),  size=1.01, inherit.aes =  TRUE) + 
+  geom_point(x = UK_amp_usage, y = UK_amp_res, size = 5, col = "red", shape  = 22, fill = "red", alpha = 0.1)
+
+
+# Combined Plot -----------------------------------------------------------
+
+comb_gen <- ggarrange(plot_list[[1]][[2]], model_fit_gen, labels = c("A", "B"), font.label = c(size = 20),
+                      nrow = 1, ncol = 2, align = "h")
+comb_pig <- ggarrange(plot_list[[2]][[2]], model_fit_pig, labels = c("A", "B"), font.label = c(size = 20),
+                      nrow = 1, ncol = 2, align = "h")
+
+ggsave(comb_gen, filename = "baseplot_andfits_gen.png", dpi = 300, type = "cairo", width = 15, height = 6, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+ggsave(comb_pig, filename = "baseplot_andfits_pigs.png", dpi = 300, type = "cairo", width = 15, height = 6, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+
+
+# Demonstrating Outcome Measure -------------------------------------------
+
+parmtau <- c(seq(0,0.0025, by = 0.0005), UK_amp_usage)
+init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+
+parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
+           
+           betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], tau = 0,
+           betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], 
+           phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
+           kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], 
+           zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
+           psi = c(UK_food_usage, UK_food_pig_usage)[j], fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
+
+tauoutput_test <- data.frame(matrix(nrow = length(parmtau), ncol = 7))
+
+for (i in 1:length(parmtau)) {
+  parms2["tau"] = parmtau[i]
+  out <-  runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
+  tauoutput_test[i,] <- c(parmtau[i],
+                     (out[[2]]*(446000000))/100000,
+                     (out[[3]]*(446000000))/100000,
+                     ((out[[2]] + out[[3]])*(446000000))/100000,
+                     (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
+                     out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
+                     out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
+}
+
+colnames(tauoutput_test) <- c("tau", "InfHumans", "ResInfHumans","ICombH", "ICombA", "IResRatA","IResRat")
+
+baseline = tauoutput_test[tauoutput_test$tau == UK_amp_usage,"IResRat"]
+curtailment = tauoutput_test[tauoutput_test$tau == 0,"IResRat"]
+
+outcome_example <- ggplot(tauoutput_test, aes(x = tau, y = IResRat)) + geom_line(size = 1.2) + theme_bw() + 
+  theme(legend.text=element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm")) +
+  labs(x ="Ampicillin Usage in Fattening Pigs (g/PCU)", y = "Ampicillin-Resistant Fattening Pig Carriage") + 
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0.2,0.3)) +
+  geom_hline(yintercept = curtailment, col= "red", linetype = "dotted", size = 1.2) +  geom_hline(yintercept = baseline, col= "red", linetype = "dotted", size = 1.2) +
+  geom_point(x = 0, y = curtailment, col = "red", size = 5) + geom_point(x = UK_amp_usage, y = baseline, col = "red", size = 5) + 
+  annotate(geom = "text", x =  c(0, UK_amp_usage, UK_amp_usage), y =  c(curtailment, baseline, (curtailment + baseline)/2), label = c("Curtailment", "Baseline Usage", 
+                                                                                                                                      paste0(round(1-(curtailment/ baseline), digits = 3)*100, " % Resistance Reduction")),
+           hjust = -0.1, vjust = 2, size = 4, col = c("red","red","purple")) + 
+  annotate("segment", x = UK_amp_usage, xend = UK_amp_usage, y = baseline, yend = curtailment, colour = "purple", size=2, alpha=0.6, arrow=arrow())
+
+
+ggsave(outcome_example, filename = "rel_resoutcome_example.png", dpi = 300, type = "cairo", width = 6, height = 6, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+

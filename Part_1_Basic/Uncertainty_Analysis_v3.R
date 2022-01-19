@@ -141,7 +141,7 @@ heat_list <- list()
 
 for(z in 1:2) {
   
-  MAP_amp <- map_list[[z]]
+  MAP_amp <- map_list[[1]]
   tauoutput <- data.frame(matrix(nrow = length(comb_parms), ncol = 4))
   
   for (i in 1:nrow(comb_parms)) {
@@ -198,8 +198,7 @@ for(z in 1:2) {
   heat_list[[z]] <- list(tauoutput, plot1, plot2)
 }
 
-
-# Plotting ----------------------------------------------------------------
+# Plotting Res ----------------------------------------------------------------
 
 tauoutput <- heat_list[[1]][[1]]
 tauoutput1 <- heat_list[[2]][[1]]
@@ -212,84 +211,86 @@ min_pig <- min(tauoutput1$DecRes)
 scale_low <- min(c(min_gen, min_pig))/ max(c(min_gen, min_pig))
 scale_high <- max(c(max_gen, max_pig))/ min(c(max_gen, max_pig))
   
-breaks1 <- seq(0.10, 0.2, by = 0.01)
+breaks1 <- seq(0.07, 0.2, by = 0.01)
 
 heat_gen <- ggplot(tauoutput, aes(FracImp, Propres_Imp, z = DecRes)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
   labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
        title = paste0("Baseline", " Import Scenario (psi = 0.656)"), fill = "% Decrease in Res") +
-  scale_fill_viridis_b(breaks = breaks1, direction = 1, begin = 0.1*scale_low, end = 0.9) + 
+  scale_fill_viridis_b(breaks = breaks1, direction = 1)+
+  metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black")+ 
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
         axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
         plot.title = element_text(size = 15, vjust = 3, hjust = 0.1, face = "bold"),
         legend.spacing.x = unit(0.4, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.6, "cm"),
-        legend.key.width =  unit(2, "cm"))
+        legend.key.width =  unit(2, "cm")) + geom_point(x = EU_cont, y = EU_res, size = 5, col = "red") +
+  metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black")
 
 
 heat_pig <- ggplot(tauoutput1, aes(FracImp, Propres_Imp, z = DecRes)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
   labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
        title = paste0("Pig", " Import Scenario (psi = 0.4455)"), fill = "% Decrease in Res")  +
-  scale_fill_viridis_b(breaks = breaks1, direction =  1, begin = 0.1, end = 0.9*scale_high) + 
+  scale_fill_viridis_b(breaks = breaks1, direction =  1) + 
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
   theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
         axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
         plot.title = element_text(size = 15, vjust = 3, hjust = 0.1, face = "bold"),
         legend.spacing.x = unit(0.4, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.6, "cm"),
-        legend.key.width =  unit(2, "cm"))
+        legend.key.width =  unit(2, "cm")) + geom_point(x = EU_cont, y = EU_res, size = 5, col = "red") +
+  metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black")
 
 
-comb_heat <- ggarrange(heat_gen, heat_pig, ncol = 1, nrow = 2, labels = c("A", "B"), font.label = list(size = 20), vjust = 1.2, common.legend = TRUE, legend = "bottom")
+comb_heat <- ggarrange(heat_gen, heat_pig, ncol = 1, nrow = 2, labels = c("A", "B"), font.label = list(size = 20), vjust = 1.2)
 
-ggsave(comb_heat, filename = "heat_comb_res.png", dpi = 300, type = "cairo", width = 8, height = 10, units = "in", 
+ggsave(comb_heat, filename = "heat_comb_res.png", dpi = 300, type = "cairo", width = 8, height = 12, units = "in", 
        path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
 
+# Plotting FBD ----------------------------------------------------------------
 
-# Exploring the "Lump" ----------------------------------------------------
+tauoutput <- heat_list[[1]][[1]]
+tauoutput1 <- heat_list[[2]][[1]]
 
+max_gen <- max(tauoutput$IncFBD)
+min_gen <- min(tauoutput$IncFBD)
+max_pig <- max(tauoutput1$IncFBD)
+min_pig <- min(tauoutput1$IncFBD)
 
-parmtau <- seq(0,0.0025, by = 0.0001)
-init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
+scale_low <- min(c(min_gen, min_pig))/ max(c(min_gen, min_pig))
+scale_high <- max(c(max_gen, max_pig))/ min(c(max_gen, max_pig))
 
-tauoutput <- data.frame(matrix(nrow = length(parmtau), ncol =7))
+breaks1 <- seq(0.025, 0.045, by = 0.0025)
 
-for (i in 1:length(parmtau)) {
-  
-  parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
-             
-             betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], betaHH = MAP_amp[MAP_amp$Parameter == "betaHH", 2]*0.4, tau = parmtau[i],
-             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
-             kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
-             psi = 0.656, fracimp = 0.5, propres_imp = 1, eta = 0.11016)
-  
-  out <-  runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms2)
-  tauoutput[i,] <- c(parmtau[i],
-                     (out[[2]]*(446000000))/100000,
-                     (out[[3]]*(446000000))/100000,
-                     ((out[[2]] + out[[3]])*(446000000))/100000,
-                     (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
-                     out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
-                     out[[1]][["Irh"]] / (out[[1]][["Ish"]] + out[[1]][["Irh"]]))
-}
+heat_gen_fbd <- ggplot(tauoutput, aes(FracImp, Propres_Imp, z = IncFBD)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
+  labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+       title = paste0("Baseline", " Import Scenario (psi = 0.656)"), fill = "% Increase in ICombH") +
+  scale_fill_viridis_b(breaks = breaks1, direction = 1) + 
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+        axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
+        plot.title = element_text(size = 15, vjust = 3, hjust = 0.1, face = "bold"),
+        legend.spacing.x = unit(0.4, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.6, "cm"),
+        legend.key.width =  unit(2, "cm")) + geom_point(x = EU_cont, y = EU_res, size = 5, col = "red")  +
+  metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
+                          stroke = 0.05, stroke.color = "black")
 
-colnames(tauoutput) <- c("tau", "InfHumans", "ResInfHumans","ICombH", "ICombA", "IResRat","IResRatA")
+heat_pig_fbd <- ggplot(tauoutput1, aes(FracImp, Propres_Imp, z = IncFBD)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
+  labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+       title = paste0("Pig", " Import Scenario (psi = 0.4455)"), fill = "% Increase in ICombH")  +
+  scale_fill_viridis_b(breaks = breaks1, direction =  1) + 
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
+  theme(legend.position = "bottom", legend.title = element_text(size=14), legend.text=element_text(size=12),  axis.text=element_text(size=14),
+        axis.title.y=element_text(size=14),axis.title.x = element_text(size=14),  
+        plot.title = element_text(size = 15, vjust = 3, hjust = 0.1, face = "bold"),
+        legend.spacing.x = unit(0.4, 'cm'), plot.margin=unit(c(0.5,0.4,0.4,0.4),"cm"), legend.key.height =unit(0.6, "cm"),
+        legend.key.width =  unit(2, "cm")) + geom_point(x = EU_cont, y = EU_res, size = 5, col = "red") +
+  metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
+                    stroke = 0.05, stroke.color = "black")
 
-plotdata <- melt(tauoutput,
-                 id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
+comb_heat <- ggarrange(heat_gen_fbd, heat_pig_fbd, ncol = 1, nrow = 2, labels = c("A", "B"), 
+                       font.label = list(size = 20), vjust = 1.2)
 
-ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
-  geom_vline(xintercept = UK_amp_usage, alpha = 0.3, size = 2) + 
-  geom_col(color = "black",position= "stack", width  = 0.0001) + scale_x_continuous(expand = c(0, 0.0005)) + 
-  scale_y_continuous(limits = c(0,2), expand = c(0, 0))  + 
-  geom_text(label= c(round(tauoutput$IResRat, digits = 2),rep("",length(parmtau))),vjust=-0.5, hjust = 0.05,
-            position = "stack", angle = 45) +
-  theme(legend.position=c(0.75, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) + 
-  scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
-  labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
-
-
-plotdata <- melt(tauoutput,
-                 id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
-
-ggplot(tauoutput, aes(x = tau, y = ICombA)) + geom_line()  + scale_y_continuous(expand = c(0, 0.045)) 
+ggsave(comb_heat, filename = "heat_comb_fbd.png", dpi = 300, type = "cairo", width = 8, height = 12, units = "in", 
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")

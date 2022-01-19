@@ -2,6 +2,7 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolve"); library("parallel"); library("lhs")
 library("Rcpp")
 
+
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 #setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
@@ -92,16 +93,17 @@ UK_amp_usage <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_O
 UK_cont <- as.numeric(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",24])
 UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
 
+UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
+UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",4]
+
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
-EU_cont <- mean(rowMeans(country_data_imp[-1,22:25], na.rm = T))
-EU_res <- mean(rowMeans(country_data_imp[-1,26:29], na.rm = T))
-
-# Import in Parameter MAPs ------------------------------------------------
+EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
+EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
 # Import Fitted Parameters ------------------------------------------------
 
-post_dist_names <- grep("ABC_post_amppigs_",
+post_dist_names <- grep("ABC_post_amppigs_gen",
                         list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
 
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
@@ -552,7 +554,7 @@ p_efast_fbd <- ggplot(plotdata_FBD, aes(fill = variable, x =  X, y = value)) + t
                               expression(PropRes[Imp]), expression(eta)))
 
 p_efast_res <- ggplot(plotdata_res, aes(fill = variable, x =  X, y = value)) + theme_bw() + 
-  geom_col(color = "black",position= "stack") + scale_y_continuous(limits = c(0,0.6), expand = c(0, 0)) +
+  geom_col(color = "black",position= "stack") + scale_y_continuous(limits = c(0,0.7), expand = c(0, 0)) +
   theme(legend.position=c(0.8, 0.85), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 

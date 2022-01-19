@@ -137,7 +137,6 @@ parmdetails <- rbind(data.frame("Parameter" = "fracimp", "Value" = seq(0, 1, by 
                      data.frame("Parameter" = "tau", "Value" = seq(0, max(dataamp_pigs_raw[,17:20]/1000, na.rm = T), 
                                                                    by = max(dataamp_pigs_raw[,17:20]/1000, na.rm = T)/100)))
 
-
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
 
 parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = maps_est["betaAA",2],
