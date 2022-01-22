@@ -4,6 +4,7 @@ library("Rcpp")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Livestock Dynamics Dataset ----------------------------------------------
 

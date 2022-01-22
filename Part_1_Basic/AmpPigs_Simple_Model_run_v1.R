@@ -137,17 +137,22 @@ plot_list <- list()
 
 for(j in 1:2) {
   
-  MAP_amp <- map_list[[j]]
+  MAP_amp <- map_list[[1]]
   
   parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
              
              betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], tau = 0,
-             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], 
+             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], 
+             betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], 
              phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
              kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], 
              zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
-             psi = c(UK_food_usage, UK_food_pig_usage)[j], fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
+             psi = 0, fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016)
   
+  parms2[["psi"]] = c(UK_food_usage, UK_food_pig_usage)[j]
+  
+  
+  print(parms2)
   tauoutput <- data.frame(matrix(nrow = length(parmtau), ncol = 7))
   
   for (i in 1:length(parmtau)) {

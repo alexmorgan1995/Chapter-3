@@ -332,16 +332,26 @@ for(j in 1:3){
 #Plot the Incremental Analysis 
 p_incr_list <- list()
 
+data1 <- as.data.frame(cbind(sapply(data_imp_list_incr[[2+1]], "[[", 3)))
+
 for(i in 1:2) {
   p_incr_list[[i]] <- local ({
     
+    #baseline
+    base <- data_imp_list_incr[[1]]
+    
+    #for un-normalised
     data <- as.data.frame(cbind(sapply(data_imp_list_incr[[i+1]], "[[", 1))) # the 1 at the end refers to either normalised or un-normalised change in FBD
     colnames(data) <- sapply((list(amp_cont_data_incr[,1], amp_res_data_incr[,1])[[i]])*100, function(x) paste0(x, "%"))
-    data$Baseline <- data_imp_list_incr[[1]][,1]
-    data$usage <- c(seq(0, 1, by = 0.02), 0.656)
+    data$Baseline <- base[,1]; data$usage <- c(seq(0, 1, by = 0.02), 0.656)
+    
+    #for normalised 
+    data1 <- as.data.frame(cbind(sapply(data_imp_list_incr[[i+1]], "[[", 3))) # the 1 at the end refers to either normalised or un-normalised change in FBD
+    colnames(data1) <- sapply((list(amp_cont_data_incr[,1], amp_res_data_incr[,1])[[i]])*100, function(x) paste0(x, "%"))
+    
+    data1$Baseline <- (base[,1]/ base[base$domusage == 0.656,"relchange"])*100; data1$usage <- c(seq(0, 1, by = 0.02), 0.656)
     
     plot_cont <- melt(data, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
-    print(max(plot_cont$value, na.rm = T)*1.2)
     p_incr <- ggplot(plot_cont, aes(x = usage, y = value, col = variable, size = variable, lty = variable)) + geom_line() +
       scale_color_manual(values = c(viridis::viridis((ncol(data)-2)), "red")) + 
       geom_vline(xintercept = 0.656, size = 2, col = "hotpink" , alpha = 0.6) + 
@@ -350,16 +360,40 @@ for(i in 1:2) {
       theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
             axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
             legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins", 
-                                                       y = "Reduction in Human Resistance due to Curtailment", 
+                                                       y = c("Reduction in Human Resistance due to Curtailment",
+                                                             "Increase in FBD due to Curtailment")[i], 
                                                        color = c("Proportion Contaminated", "Proportion Resistant")[i]) +
-      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.2)) + guides(size= "none", linetype = "none") 
+      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + 
+      scale_y_continuous(expand = c(0, 0), limits = c(min(plot_cont$value, na.rm = T), max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
   
-  #ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res")[i] ,".png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
-  #       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
-  
-  return(p_incr)
+    
+    plot_cont_norm <- melt(data1, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
+    p_incr_norm <- ggplot(plot_cont_norm, aes(x = usage, y = value, col = variable, size = variable, lty = variable)) + geom_line() +
+      scale_color_manual(values = c(viridis::viridis((ncol(data)-2)), "red")) + 
+      geom_vline(xintercept = 0.656, size = 2, col = "hotpink" , alpha = 0.6) + 
+      scale_size_manual(values = c(rep(1, (ncol(data)-2)), 2)) + 
+      scale_linetype_manual(values = c(rep(1, (ncol(data)-2)), 2)) + theme_bw() + 
+      theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+            axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+            legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins", 
+                                                       y = c("Normalised Reduction in Human Resistance due to Curtailment",
+                                                             "Normalised Increase in FBD due to Curtailment")[i], 
+                                                       color = c("Proportion Resistant", "Proportion Contaminated")[i]) +
+      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + 
+      scale_y_continuous(expand = c(0, 0)) + guides(size= "none", linetype = "none") 
+    
+    plot_list <- list(p_incr, p_incr_norm)
+    
+  return(plot_list)
   })
 }
+
+combplot <- ggarrange(p_incr_list[[1]][[1]], p_incr_list[[1]][[2]],
+           p_incr_list[[2]][[1]], p_incr_list[[2]][[2]], 
+           nrow = 2, ncol = 2)
+
+ggsave(combplot, filename = "comb_import.png", dpi = 300, type = "cairo", width = 13, height = 13, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 
 # Testing -----------------------------------------------------------------

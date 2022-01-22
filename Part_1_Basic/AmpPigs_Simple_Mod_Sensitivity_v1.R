@@ -5,7 +5,7 @@ library("Rcpp")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -104,9 +104,9 @@ EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 # Import Fitted Parameters ------------------------------------------------
 
 post_dist_names <- grep("ABC_post_amppigs_gen",
-                        list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
 
 post_dist <- lapply(post_dist_names, read.csv)
 
@@ -236,14 +236,14 @@ prel_res <- plot_grid(plot_grid(suppplotlist[[1]][[4]], suppplotlist[[2]][[4]], 
   draw_label("rel_Res", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 ggsave(pdelta_res, filename = "delta_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 ggsave(prel_FBD, filename = "rel_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 ggsave(prel_res, filename = "rel_Res_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # LHS - Run Full Parameters ---------------------------------------------------------------------
 
@@ -363,7 +363,7 @@ PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(PRCC_plot, filename = "LHS_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 #Plotting rel_FBD PRCC
 plotrel_fbd <- data.frame("parm" = rownames(prcc_fbd_rel[[7]]), as.data.frame(prcc_fbd_rel[[7]]))
@@ -404,7 +404,7 @@ PRCC_plot <- ggarrange(p_relfbd, p_relres, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(PRCC_plot, filename = "LHS_PRCC_rel.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # AMR Wrapper Function - for eFAST ----------------------------------------------------
 
@@ -575,7 +575,7 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
                        legend = "bottom") 
 
 ggsave(PRCC_plot, filename = "eFAST_relative.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in", 
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 #### Combined plot for the RelRes Measure ####
 
@@ -586,8 +586,8 @@ p_efast_res <- p_efast_res + labs(title = bquote(bold("eFAST total/first order s
 comb_relres <- ggarrange(p_relres, p_efast_res, nrow = 2, ncol = 1)
   
 ggsave(comb_relres, filename = "sens_PRCC_eFAST_relres.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 ggsave(p_efast_res, filename = "eFAST_relres.png", dpi = 300, type = "cairo", width = 8, height = 6, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 

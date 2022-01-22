@@ -3,8 +3,8 @@ library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolv
 library("Rcpp")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -101,9 +101,9 @@ EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 # Import Fitted Parameters ------------------------------------------------
 
 post_dist_names <- grep("ABC_post_amppigs_",
-                        list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
 
 post_dist <- lapply(post_dist_names, read.csv)
 
@@ -202,9 +202,9 @@ pres<- plot_grid(plot_grid(suppplotlist[[1]][[2]], suppplotlist[[2]][[2]], suppp
 
 
 ggsave(pFBD, filename = "ICombH_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 ggsave(pres, filename = "ResRat_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 
 # LHS - Run Full Parameters ---------------------------------------------------------------------
@@ -313,7 +313,7 @@ PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
 ggsave(PRCC_plot, filename = "LHS_GENERAL_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # AMR Wrapper Function - for eFAST ----------------------------------------------------
 
@@ -465,5 +465,5 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
                        legend = "bottom") 
 
 ggsave(PRCC_plot, filename = "eFAST_GENERAL.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in", 
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
