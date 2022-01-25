@@ -156,7 +156,7 @@ singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilo
       d_phi <- runif(1, min = 0, max = 0.01)
       d_kappa <- runif(1, min = 0, max = 30)
       d_alpha <- rbeta(1, 1.5, 8.5)
-      d_zeta <- runif(1, 0, 0.01)
+      d_zeta <- runif(1, 0, 0.025)
       d_betaHA <- runif(1, 0, 0.05)
     } else { 
       p <- sample(seq(1,N),1,prob = w.old) # check w.old here
@@ -267,7 +267,7 @@ test <- ABC_algorithm(N = 1000,
                                      "foodA" = c(UK_cont, UK_cont*0.8, UK_cont*0.6, UK_cont*0.4, UK_cont*0.3, UK_cont*0.2, UK_cont*0.15, UK_cont*0.125),
                                      "AMRA" =  c(UK_amp_res, UK_amp_res*0.8, UK_amp_res*0.6, UK_amp_res*0.4, UK_amp_res*0.3, UK_amp_res*0.2, UK_amp_res*0.15, UK_amp_res*0.125)), 
                       lm.low = c(0, 0, 0, 0, 0, 0), 
-                      lm.upp = c(0.02, 0.01, 30, 1, 0.01, 0.05), 
+                      lm.upp = c(0.02, 0.01, 30, 1, 0.025, 0.05), 
                       thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = UK_food_usage,
                                       fracimp = EU_cont, propres_imp = EU_res, eta = 0.11016))
 
