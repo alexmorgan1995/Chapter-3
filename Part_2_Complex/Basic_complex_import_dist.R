@@ -252,10 +252,12 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
 #Skewed
 #Bimodal 
 
-#Use beta distributions 
+#This works for imp and propresimp
+hist(rbeta(1000, shape1 =  1, shape2 =  1))
+hist(rbeta(1000, shape1 =  0.5, shape2 =  0.5))
+hist(rbeta(1000, shape1 =  1, shape2 =  3))
 
-plot(density(rbeta()))
-
+#Need to find a way to do these 3 alternative distributions for fracimp aswell 
 
 
 
