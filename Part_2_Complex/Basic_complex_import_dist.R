@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -199,14 +199,12 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
-
-
 
 # Parameters --------------------------------------------------------------
 #New Import Parms 
@@ -254,9 +252,9 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
 
 #Use beta distributions 
 
-plot(density(rbeta()))
-
-
+hist(rbeta(1000, shape1 = 1, shape2 = 1))
+hist(rbeta(1000, shape1 = 0.5, shape2 = 0.5))
+hist(rbeta(1000, shape1 = 1, shape2 = 3))
 
 
 # Run the model -----------------------------------------------------------
