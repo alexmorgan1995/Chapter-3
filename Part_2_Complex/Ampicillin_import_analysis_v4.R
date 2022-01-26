@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -199,9 +199,16 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
+#post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
+#MAP_parms <- map_estimate(post_amp)
+#MAP_parms <- data.frame("Parameter" = names(post_amp), 
+#                        "MAP_Estimate" = colMeans(post_amp))
+
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
@@ -354,17 +361,20 @@ for(i in 1:3) {
       scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
   
   ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res", "eta")[i] ,".png"), dpi = 300, type = "cairo", width = 9, height = 7, units = "in",
-         path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+         path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
   
   return(p_incr)
   })
 }
 
 com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
+com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 1, ncol = 3, labels = c("A", "B", "C"), font.label = c(size = 20))
 
 
 ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 20, height = 7, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # Testing -----------------------------------------------------------------
 
@@ -413,4 +423,4 @@ p_base <- ggplot(data=output_base, aes(x=domusage, y=relchange)) +
            size = 4, col = "black", parse = TRUE)
 
 ggsave(p_base, filename = paste0("base_plot_import.png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")

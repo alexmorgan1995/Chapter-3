@@ -221,7 +221,7 @@ thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656
               
               imp1 = country_data_imp[2,"FBD_gen"], imp2 = country_data_imp[3,"FBD_gen"], imp3 = country_data_imp[4,"FBD_gen"], imp4 = country_data_imp[5,"FBD_gen"], 
               imp5 = country_data_imp[6,"FBD_gen"], imp6 = country_data_imp[7,"FBD_gen"], imp7 = country_data_imp[8,"FBD_gen"], imp8 = country_data_imp[9,"FBD_gen"],
-              imp8 = country_data_imp[9,"FBD_gen"], imp9 = country_data_imp[10,"FBD_gen"],
+              imp9 = country_data_imp[10,"FBD_gen"],
               
               propres_imp1 = country_data_imp[2,"FBD_res"], propres_imp2 = country_data_imp[3,"FBD_res"], propres_imp3 = country_data_imp[4,"FBD_res"], propres_imp4 = country_data_imp[5,"FBD_res"], 
               propres_imp5 = country_data_imp[6,"FBD_res"], propres_imp6 = country_data_imp[7,"FBD_res"], propres_imp7 = country_data_imp[8,"FBD_res"], propres_imp8 = country_data_imp[9,"FBD_res"], 
@@ -246,33 +246,151 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
 # Identify the Distributions ----------------------------------------------
 
 #Baseline 
+
+base_parms <- thetaparm
+
 #Homogenous
+
+homo_imp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  1)*0.3, 
+                              nrow = 100, ncol = 10))
+colnames(homo_imp) <- c(grep("imp", names(thetaparm), value = T)[13:21], "imp_nEU")
+
+homo_propresimp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  1), 
+                              nrow = 1000, ncol = 10))
+colnames(homo_propresimp) <- grep("propres_imp", names(thetaparm), value = T)
+
+base_homo_fracimp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  1), 
+                  nrow = 1000, ncol = 10))
+homo_fracimp <- t(apply(base_homo_fracimp, 1, function(x) x/sum(x)))
+colnames(homo_fracimp) <- grep("fracimp", names(thetaparm), value = T)
+
+homo_import <- cbind(homo_fracimp, homo_imp, homo_propresimp)
+
 #Skewed
+
+skew_imp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  3)*0.3, 
+                              nrow = 1000, ncol = 10))
+colnames(skew_imp) <- c(grep("imp", names(thetaparm), value = T)[13:21], "imp_nEU")
+
+skew_propresimp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  3), 
+                                     nrow = 1000, ncol = 10))
+colnames(skew_propresimp) <- grep("propres_imp", names(thetaparm), value = T)
+
+base_skew_fracimp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  3), 
+                                  nrow = 1000, ncol = 10))
+skew_fracimp <- t(apply(base_skew_fracimp,1, function(x) x/sum(x)))
+colnames(skew_fracimp) <- grep("fracimp", names(thetaparm), value = T)
+
+skew_import <- cbind(skew_fracimp, skew_imp, skew_propresimp)
+
 #Bimodal 
 
-#Use beta distributions 
+bimod_imp <- data.frame(matrix(rbeta(1000*10, shape1 = 0.5, shape2 = 0.5)*0.3, 
+                              nrow = 1000, ncol = 10))
+colnames(bimod_imp) <- c(grep("imp", names(thetaparm), value = T)[13:21], "imp_nEU")
 
-#This works for imp and propresimp
-hist(rbeta(1000, shape1 =  1, shape2 =  1))
-hist(rbeta(1000, shape1 =  0.5, shape2 =  0.5))
-hist(rbeta(1000, shape1 =  1, shape2 =  3))
+bimod_propresimp <- data.frame(matrix(rbeta(1000*10, shape1 =  0.5, shape2 =  0.5), 
+                                     nrow = 1000, ncol = 10))
+colnames(bimod_propresimp) <- grep("propres_imp", names(thetaparm), value = T)
 
-#Need to find a way to do these 3 alternative distributions for fracimp aswell 
+base_bimod_fracimp <- data.frame(matrix(rbeta(1000*10, shape1 =  0.5, shape2 =  0.5), 
+                                       nrow = 1000, ncol = 10))
+bimod_fracimp <- t(apply(base_bimod_fracimp,1, function(x) x/sum(x)))
+colnames(bimod_fracimp) <- grep("fracimp", names(thetaparm), value = T)
 
+bimod_imp <- cbind(bimod_fracimp, bimod_imp, bimod_propresimp)
 
 # Run the model -----------------------------------------------------------
 
-usage_threshold <- c(seq(0, 1, by = 0.02), 0.656)
-usage_frame <- data.frame(matrix(nrow = length(usage_threshold), ncol = 2))
+explore_parms <- list(homo_import, skew_import, bimod_imp)
+
+usage_threshold <- c(seq(0, 1, by = 0.05), 0.656)
+
+explore_parms_frame <- list()
+
+#Run the Uncertainty Analysis
+
+for(z in 1:3) {
+  explore_parms_frame[[z]] <- local({ 
+    
+    explore_sublist <- data.frame(matrix(nrow = 0, ncol = 5))
+    explore_parms_sub <- explore_parms[[z]]
+    
+    for(j in 1:nrow(explore_parms_sub)) {
+      
+      usage_frame <- data.frame(matrix(nrow = length(usage_threshold), ncol = 3))
+      
+      thetaparm[colnames(explore_parms_sub)] <- explore_parms_sub[j,]
+      
+      for(x in 1:length(usage_threshold)) {
+        thetaparm[["psi"]] <- usage_threshold[x]
+        output1 <- data.frame(matrix(nrow = 2, ncol =3))
+
+        for (i in 1:2) {
+          thetaparm["tau"] <- c(0, UK_amp_usage)[i]
+          out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
+          
+          output1[i,] <- c(c(0, UK_amp_usage)[i],
+                           ((sum(out[[1]][5:26]))*(446000000))/100000,
+                           sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
+        }
+        
+        colnames(output1) <- c("tau", "ICombH","IResRat")
+        
+        usage_frame[x,] <- c((1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100,    
+                             usage_threshold[x],
+                             j) #run
+      }
+      colnames(usage_frame) <- c("relchange", "domusage", "run_no")
+      usage_frame$normchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
+      usage_frame$explore <- c("homo", "skew", "bimod")[z]
+      explore_sublist <- rbind(usage_frame, explore_sublist)
+      print(paste0( c("homo", "skew", "bimod")[z], " | " ,(j / nrow(explore_parms_sub))*100 , "%"))
+      
+      }
+    return(explore_sublist)
+  })
+}
+
+comb_explore_list <- list()
+
+for(i in 1:3) {
+  temp <- aggregate(relchange ~ domusage, explore_parms_frame[[i]], mean)
+  temp$parms <- c("homo", "skew", "bimod")[i]
+  comb_explore_list[[i]] <- temp
+}
+
+
+#Run Baseline
+
+thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
+              
+              fracimp1 = country_data_imp[2,"Normalised_Usage_2018"], fracimp2 = country_data_imp[3,"Normalised_Usage_2018"], fracimp3 = country_data_imp[4,"Normalised_Usage_2018"], 
+              fracimp4 = country_data_imp[5,"Normalised_Usage_2018"], fracimp5 = country_data_imp[6,"Normalised_Usage_2018"], fracimp6 = country_data_imp[7,"Normalised_Usage_2018"], 
+              fracimp7 = country_data_imp[8,"Normalised_Usage_2018"], fracimp8 = country_data_imp[9,"Normalised_Usage_2018"], 
+              fracimp9 = country_data_imp[10,"Normalised_Usage_2018"], fracimp_nEU = 1 - sum(country_data_imp[2:10,"Normalised_Usage_2018"]),
+              
+              betaAA = MAP_parms["betaAA", 2], phi = MAP_parms["phi", 2], kappa = MAP_parms["kappa", 2], alpha = MAP_parms["alpha", 2], 
+              zeta = MAP_parms["zeta", 2], betaHA = MAP_parms["betaHA", 2], imp_nEU = MAP_parms["imp_nEU", 2], propres_impnEU = MAP_parms["propres_impnEU", 2], 
+              
+              imp1 = country_data_imp[2,"FBD_gen"], imp2 = country_data_imp[3,"FBD_gen"], imp3 = country_data_imp[4,"FBD_gen"], imp4 = country_data_imp[5,"FBD_gen"], 
+              imp5 = country_data_imp[6,"FBD_gen"], imp6 = country_data_imp[7,"FBD_gen"], imp7 = country_data_imp[8,"FBD_gen"], imp8 = country_data_imp[9,"FBD_gen"],
+              imp9 = country_data_imp[10,"FBD_gen"],
+              
+              propres_imp1 = country_data_imp[2,"FBD_res"], propres_imp2 = country_data_imp[3,"FBD_res"], propres_imp3 = country_data_imp[4,"FBD_res"], propres_imp4 = country_data_imp[5,"FBD_res"], 
+              propres_imp5 = country_data_imp[6,"FBD_res"], propres_imp6 = country_data_imp[7,"FBD_res"], propres_imp7 = country_data_imp[8,"FBD_res"], propres_imp8 = country_data_imp[9,"FBD_res"], 
+              propres_imp9 = country_data_imp[10,"FBD_res"],
+              
+              eta = 0.11016, tau = UK_amp_usage)
+
+usage_frame_baseline <- data.frame(matrix(nrow = length(usage_threshold), ncol = 2))
 
 for(x in 1:length(usage_threshold)) {
   thetaparm[["psi"]] <- usage_threshold[x]
   output1 <- data.frame(matrix(nrow = 2, ncol =3))
-  dump_data <- vector()
   
   for (i in 1:2) {
-    
-    temp <- vector()
+
     thetaparm["tau"] <- c(0, UK_amp_usage)[i]
     out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
     
@@ -283,20 +401,38 @@ for(x in 1:length(usage_threshold)) {
   
   colnames(output1) <- c("tau", "ICombH","IResRat")
   
-  usage_frame[x,] <- c((1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100,    
-                       usage_threshold[x])
+  usage_frame_baseline[x,] <- c(usage_threshold[x],
+                                (1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100)
 }
 
-colnames(usage_frame) <- c("relchange", "domusage")
-usage_frame$normchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
+colnames(usage_frame_baseline) <- c("domusage", "relchange")
+#usage_frame_baseline$normchange <- (usage_frame_baseline$relchange / usage_frame_baseline$relchange[usage_frame_baseline$domusage == 0.656]) * 100
+usage_frame_baseline$parms <- "baseline"
 
+comb_explore_list[[length(comb_explore_list)+1]] <- usage_frame_baseline
 
-# Plotting  ---------------------------------------------------------------
+# Plotting ----------------------------------------------------------------
 
-p_incr <- ggplot(usage_frame, aes(x = domusage, y = relchange )) + geom_line() + theme_bw() + 
+plot_data <- do.call(rbind, comb_explore_list)
+
+labs1 <- c("Baseline", "Uniform", "Skewed", "Bimodal")
+labs2 <- expression("Baseline", 
+                    "Beta"*"("*alpha*"="*1*", "*beta*"="~1*")", 
+                    "Beta"*"("*alpha*"="*1*", "*beta*"="~3*")", 
+                    "Beta"*"("*alpha*"="*0.5*", "*beta*"="~ 0.5*")")
+
+p_import_comp <- ggplot(plot_data, aes(x = domusage, y = relchange, col = parms, lty = parms)) + geom_line(size = 1.2) + theme_bw() + 
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins (Psi)", 
-                                                   y = "Efficacy of Curtailment (EoC)") +
-  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+        legend.spacing.x = unit(0.3, 'cm')) + 
+  labs(x ="Proportion of Food From Domestic Origins (Psi)", 
+                                                   y = "Efficacy of Curtailment (EoC)",
+                                                   col = "Heterogeneity \n in Import") +
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) + 
+  scale_color_manual(labels = labs2, values = c("red", viridis::viridis(3)))+ 
+  scale_linetype_manual(values = c(2,1,1,1)) + guides(linetype = "none")
+
+
+ggsave(p_import_comp, filename = "imp_anal_comp.png", dpi = 300, type = "cairo", width = 9, height = 8, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
