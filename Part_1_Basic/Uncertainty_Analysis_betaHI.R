@@ -16,19 +16,19 @@ amrimp <- function(t, y, parms) {
     dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + 0.5*zeta*Sa*(1-alpha)
     
     dSh = uh + rh*(Ish+Irh) - 
-      psi*(betaHD*(Isa*eta)*Sh) - 
-      psi*(1-alpha)*(betaHD*(Ira*eta)*Sh) - 
-      (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh) - 
-      (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh) - uh*Sh 
+      psi*(betaHA*(Isa*eta)*Sh) - 
+      psi*(1-alpha)*(betaHA*(Ira*eta)*Sh) - 
+      (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh) - 
+      (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - uh*Sh 
     
-    dIsh =  psi*betaHD*(Isa*eta)*Sh + 
-      (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh) - rh*Ish - uh*Ish 
+    dIsh =  psi*betaHA*(Isa*eta)*Sh + 
+      (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh) - rh*Ish - uh*Ish 
     
-    dIrh = (1-alpha)*psi*(betaHD*(Ira*eta)*Sh) + 
-      (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
+    dIrh = (1-alpha)*psi*(betaHA*(Ira*eta)*Sh) + 
+      (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
     
-    CumS = psi*betaHD*(Isa*eta)*Sh + (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh)
-    CumR = (1-alpha)*psi*(betaHD*(Ira*eta)*Sh) + (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh)
+    CumS = psi*betaHA*(Isa*eta)*Sh + (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh)
+    CumR = (1-alpha)*psi*(betaHA*(Ira*eta)*Sh) + (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh)
     
     return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh), CumS, CumR))
   })
@@ -99,9 +99,9 @@ UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Li
 EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
 EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
-
 # Import Fitted Parameters ------------------------------------------------
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha")
 
 import <- function(id) {
   data <- data.frame(matrix(ncol = 9, nrow = 0))
@@ -114,18 +114,15 @@ import <- function(id) {
   return(data)
 }
 
-data <- list(import("gen"), import("pig"))
-lapply(1:2, function(x) data[[x]]$group = factor(data[[x]]$group, levels = unique(data[[x]]$group)))
+data <- import("gen")
 
 map_list <- list()
 
-for(i in 1:2) {
-  temp <- data[[i]] 
-  tail(temp$group, 1)
-  map_list[[i]] <- data.frame("Parameters" = colnames(temp[temp$group == tail(temp$group, 1),][1:7]), 
-                              "MAP_Estimate" = colMeans(temp[temp$group == tail(temp$group, 1),][1:7]))
+for(i in 1:1) {
+  temp <- data
+  map_list[[i]] <- data.frame("Parameters" = colnames(temp[temp$group == "data8",][1:6]), 
+                              "MAP_Estimate" = colMeans(temp[temp$group == "data8",][1:6]))
 }
-
 
 # Generic Heatmap Sensitivity Analysis - ICombH + ResRatio ------------------------
 
@@ -148,7 +145,7 @@ for(k in 1:3) {
   parms2 = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, 
              
              betaAA = MAP_amp[MAP_amp$Parameter == "betaAA", 2], tau = 0,
-             betaHD = MAP_amp[MAP_amp$Parameter == "betaHD", 2], betaHI = MAP_amp[MAP_amp$Parameter == "betaHI", 2], phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
+             betaHA = MAP_amp[MAP_amp$Parameter == "betaHA", 2], phi = MAP_amp[MAP_amp$Parameter == "phi", 2], 
              kappa = MAP_amp[MAP_amp$Parameter == "kappa", 2], alpha = MAP_amp[MAP_amp$Parameter == "alpha", 2], zeta = MAP_amp[MAP_amp$Parameter == "zeta", 2], 
              eta = c(0.05, 0.11016, 0.2)[k])
   
@@ -197,10 +194,10 @@ for(i in 1:3) {
   tauoutput <- betaHI_list[[i]][[1]]
   tauoutput1 <- betaHI_list[[i]][[2]]
          
-  breaks1 <- seq(4.5, 20, by = 1)
+  breaks1 <- seq(0, 20, by = 1)
                    
   heat_gen <- ggplot(tauoutput, aes(FracImp, Propres_Imp, z = DecRes)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
-    labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+    labs(x = bquote("Fraction of Imports Contaminated (Cont"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
          title = paste0("Dom Food Usage = 0.656, Reduc in Dom Cont = ", c("0.05","0.011016","0.2")[i]), fill = "Efficacy of Curtailment (%)") +
     scale_fill_viridis_b(breaks = breaks1, direction = 1)+
     metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
@@ -216,7 +213,7 @@ for(i in 1:3) {
   
   
   heat_pig <- ggplot(tauoutput1, aes(FracImp, Propres_Imp, z = DecRes)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
-    labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+    labs(x = bquote("Fraction of Imports Contaminated (Cont"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
          title = paste0("Dom Food Usage = 0.4455, Reduc in Dom Cont = ", c("0.05","0.011016","0.2")[i]), fill = "Efficacy of Curtailment (%)")  +
     scale_fill_viridis_b(breaks = breaks1, direction =  1) + 
     scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +
@@ -240,6 +237,13 @@ p1 <- ggarrange(plot_list[[1]][[1]], plot_list[[1]][[2]],
 ggsave(p1, filename = "heat_comb_eta.png", dpi = 300, type = "cairo", width = 14, height = 17, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
+p_isol <- ggarrange(plot_list[[2]][[1]], plot_list[[2]][[2]],
+          ncol = 1, nrow = 2, labels = c("A","B"), font.label = list(size = 20), vjust = 1.2)
+
+ggsave(p_isol, filename = "heat_comb_res_isol.png", dpi = 300, type = "cairo", width = 7, height = 11, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
 # Plotting FBD ----------------------------------------------------------------
 
 plot_list <- list()
@@ -249,10 +253,10 @@ for(i in 1:3) {
   tauoutput <- betaHI_list[[i]][[1]]
   tauoutput1 <- betaHI_list[[i]][[2]]
   
-  breaks1 <- seq(1, 5, by = 0.25)
+  breaks1 <- seq(0, 7, by = 0.25)
   
   heat_gen <- ggplot(tauoutput, aes(FracImp, Propres_Imp, z = IncFBD)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
-    labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+    labs(x = bquote("Fraction of Imports Contaminated (Cont"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
          title = paste0("Dom Food Usage = 0.656, Reduc in Dom Cont = ", c("0.05","0.011016","0.2")[i]), fill = "Relative FBD Increase (%)") +
     scale_fill_viridis_b(breaks = breaks1, direction = 1)+
     metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
@@ -268,7 +272,7 @@ for(i in 1:3) {
   
   
   heat_pig <- ggplot(tauoutput1, aes(FracImp, Propres_Imp, z = IncFBD)) + metR::geom_contour_fill(breaks = breaks1, color = "black", size = 0.1)  + 
-    labs(x = bquote("Fraction of Imports Contaminated (Frac"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
+    labs(x = bquote("Fraction of Imports Contaminated (Cont"["Imp"]~")"), y = bquote("Fraction of Contaminated Imports Resistant"), 
          title = paste0("Dom Food Usage = 0.4455, Reduc in Dom Cont = ", c("0.05","0.011016","0.2")[i]), fill = "Relative FBD Increase (%)")  +
     scale_fill_viridis_b(breaks = breaks1, direction =  1) + 
     scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0, 0)) + theme_bw() +

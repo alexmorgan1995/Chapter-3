@@ -2,7 +2,7 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -199,9 +199,9 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
-post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
@@ -209,10 +209,10 @@ MAP_parms <- data.frame("Parameter" = names(post_amp),
 # Test Posteriors ---------------------------------------------------------
 
 amp_post <- do.call(rbind,
-                    lapply(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), read.csv))
+                    lapply(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), read.csv))
 
-amp_post$gen <- as.vector(sapply(1:(nrow(amp_post)/nrow(read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), 1)))), 
-                                 function(x) rep(paste0("gen_",x), nrow(read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/dump", pattern = "complex"), 1))))))
+amp_post$gen <- as.vector(sapply(1:(nrow(amp_post)/nrow(read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1)))), 
+                                 function(x) rep(paste0("gen_",x), nrow(read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))))))
 
 l_amp_post <- lapply(1:length(colnames(amp_post)[-1]), function(x) melt(amp_post, id.vars = "gen", measure.vars = colnames(amp_post)[x])[,c(1,3)])
 
@@ -221,8 +221,7 @@ names = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], 
           expression(paste("Efficacy of Antibiotic-Mediated Animal Recovery (", kappa, ")")),
           expression(paste("Transmission-related Antibiotic Resistant Fitness Cost (", alpha, ")")),
           expression(paste("Background Infection Rate (", zeta, ")")),
-          expression(paste("Rate of Domestic Animal-to-Human Transmission (", beta[HD], ")")),
-          expression(paste("Rate of EU Animal-to-Human Transmission (", beta[HI_EU], ")")),
+          expression(paste("Rate of Domestic Animal-to-Human Transmission (", beta[HA], ")")),
           expression(paste("Proportion of non-EU Imports Contaminated (", Imp[nonEU], ")")),
           expression(paste("Proportion of Contaminated non-EU Imports Resistant (", PropRes[nonEU], ")")))
 
@@ -239,7 +238,7 @@ for(i in 1:length(names)){
 
 ggarrange(amp_p_list[[1]], amp_p_list[[2]], amp_p_list[[3]],
           amp_p_list[[4]], amp_p_list[[5]], amp_p_list[[6]],
-          amp_p_list[[7]], amp_p_list[[8]], amp_p_list[[9]], nrow = 3, ncol = 3,
+          amp_p_list[[7]], amp_p_list[[8]], nrow = 3, ncol = 3,
           common.legend = TRUE, legend = "bottom")
 
 # Parameterisation  -------------------------------------------------------
@@ -274,7 +273,7 @@ thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656
               fracimp9 = country_data_imp[10,"Normalised_Usage_2018"], fracimp_nEU = 1 - sum(country_data_imp[2:10,"Normalised_Usage_2018"]),
               
               betaAA = MAP_parms["betaAA", 2], phi = MAP_parms["phi", 2], kappa = MAP_parms["kappa", 2], alpha = MAP_parms["alpha", 2], 
-              zeta = MAP_parms["zeta", 2], betaHD = MAP_parms["betaHD", 2], betaHI_EU = MAP_parms["betaHI_EU", 2], imp_nEU = MAP_parms["imp_nEU", 2], propres_impnEU = MAP_parms["propres_impnEU", 2], 
+              zeta = MAP_parms["zeta", 2], betaHA = MAP_parms["betaHD", 2], betaHI_EU = MAP_parms["betaHI_EU", 2], imp_nEU = MAP_parms["imp_nEU", 2], propres_impnEU = MAP_parms["propres_impnEU", 2], 
               
               imp1 = country_data_imp[2,"FBD_gen"], imp2 = country_data_imp[3,"FBD_gen"], imp3 = country_data_imp[4,"FBD_gen"], imp4 = country_data_imp[5,"FBD_gen"], 
               imp5 = country_data_imp[6,"FBD_gen"], imp6 = country_data_imp[7,"FBD_gen"], imp7 = country_data_imp[8,"FBD_gen"], imp8 = country_data_imp[9,"FBD_gen"],

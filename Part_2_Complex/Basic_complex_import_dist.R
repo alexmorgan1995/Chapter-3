@@ -436,3 +436,40 @@ p_import_comp <- ggplot(plot_data, aes(x = domusage, y = relchange, col = parms,
 ggsave(p_import_comp, filename = "imp_anal_comp.png", dpi = 300, type = "cairo", width = 9, height = 8, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
+
+# Plotting Distributions --------------------------------------------------
+
+dist_plots <- data.frame("Uniform" = rbeta(1000, 1, 1),
+                         "Skewed" = rbeta(1000, 1, 3),
+                         "Bimodal" = rbeta(1000, 0.5, 0.5))
+
+unif <- ggplot(dist_plots, aes(x=Uniform)) + geom_histogram(bins = 20, fill = "grey", col = "black") + theme_bw() + 
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm'))+
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 70))+ 
+  labs(x ="Unscaled Import Variable", 
+       y = expression("Beta"*"("*alpha*"="*1*", "*beta*"="~1*")"))
+
+skew <- ggplot(dist_plots, aes(x=Skewed)) + geom_histogram(bins = 20, fill = "grey", col = "black") + theme_bw() + 
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm'))+
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 150))+ 
+  labs(x ="Unscaled Import Variable", 
+       y = expression("Beta"*"("*alpha*"="*1*", "*beta*"="~3*")"))
+
+bimod <- ggplot(dist_plots, aes(x=Bimodal)) + geom_histogram(bins = 20, fill = "grey", col = "black") + theme_bw() + 
+  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+        legend.spacing.x = unit(0.3, 'cm'))+
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 120))+ 
+  labs(x ="Unscaled Import Variable", 
+       y = expression("Beta"*"("*alpha*"="*0.5*", "*beta*"="~0.5*")"))
+
+p_dist <- ggarrange(unif, skew, bimod, nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
+
+ggsave(p_dist, filename = "dist_example.png", dpi = 300, type = "cairo", width = 8, height = 10, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
