@@ -633,6 +633,11 @@ inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value)) + the
 p_comb_res <- ggarrange(res_comb_psi, res_comb, common.legend = T , legend = "bottom", labels = c("A", "B"), font.label = c(size = 20))
 p_comb_inf <- ggarrange(inf_comb_psi, inf_comb, common.legend = T , legend = "bottom", labels = c("A", "B"), font.label = c(size = 20))
 
+
+
+ggsave(inf_comb_psi, filename = "base_attri_psi_gen.png", dpi = 300, type = "cairo", width = 7, height = 6, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
 ggsave(p_comb_res, filename = "base_attri_psi_res.png", dpi = 300, type = "cairo", width = 10, height = 6, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 ggsave(p_comb_inf, filename = "base_attri_psi_inf.png", dpi = 300, type = "cairo", width = 10, height = 6, units = "in",
