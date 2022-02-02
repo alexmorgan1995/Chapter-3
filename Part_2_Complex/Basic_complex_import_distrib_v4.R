@@ -124,6 +124,7 @@ amrimp <- function(t, y, parms) {
   })
 }
 
+
 # Livestock Dynamics Dataset ----------------------------------------------
 
 #Import Data
@@ -198,13 +199,6 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
-
-#post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
-#MAP_parms <- map_estimate(post_amp)
-#MAP_parms <- data.frame("Parameter" = names(post_amp), 
-#                        "MAP_Estimate" = colMeans(post_amp))
-
 setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
 post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
@@ -212,7 +206,9 @@ MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
 
+# Parameters --------------------------------------------------------------
 #New Import Parms 
+
 thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
               
               share1 = country_data_imp[2,"Normalised_Usage_2018"], share2 = country_data_imp[3,"Normalised_Usage_2018"], share3 = country_data_imp[4,"Normalised_Usage_2018"], 
@@ -234,8 +230,6 @@ thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656
               
               eta = 0.11016, tau = UK_amp_usage)
 
-# Run the Import Analysis Model -----------------------------------------------------------
-
 init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
          Sh = 1,
          IshDA = 0,IrhDA = 0,
@@ -250,177 +244,180 @@ init = c(Sa=0.98, Isa=0.01, Ira=0.01,
          IshA9 = 0,IrhA9 = 0,
          IshAnEU = 0,IrhAnEU = 0)
 
-usage_threshold <- c(seq(0, 1, by = 0.02), 0.656)
+# Identify the Distributions ----------------------------------------------
 
-#Function for the Import %
+#Baseline 
+base_parms <- thetaparm
 
-import_res_func <- function(parms, init, usage_threshold, uk_usage) {
-  parmtau1 <- c(0, UK_amp_usage)
-  usage_frame <- data.frame(matrix(nrow = length(usage_threshold), ncol = 2))
+#Homogenous
+base_homo_shareimp <- data.frame(matrix(rbeta(1000*10, shape1 =  1, shape2 =  1), 
+                  nrow = 1000, ncol = 10))
+homo_shareimp <- t(apply(base_homo_shareimp, 1, function(x) x/sum(x)))
+colnames(homo_shareimp) <- grep("share", names(thetaparm), value = T)
+
+#Skewed
+base_skew_shareimp <- data.frame(matrix(rbeta(1000*10, shape1 =  0.5, shape2 =  2), 
+                                  nrow = 1000, ncol = 10))
+skew_shareimp <- t(apply(base_skew_shareimp,1, function(x) x/sum(x)))
+colnames(skew_shareimp) <- grep("share", names(thetaparm), value = T)
+
+# Run the model -----------------------------------------------------------
+
+explore_parms <- list(homo_shareimp, skew_shareimp)
+
+usage_threshold <- c(seq(0, 1, by = 0.05), 0.656)
+
+explore_parms_frame <- list()
+
+#Run the Uncertainty Analysis
+
+for(z in 1:2) {
+  explore_parms_frame[[z]] <- local({ 
+    
+    explore_sublist <- data.frame(matrix(nrow = 0, ncol = 5))
+    explore_parms_sub <- explore_parms[[z]]
+    
+    for(j in 1:nrow(explore_parms_sub)) {
+      
+      usage_frame <- data.frame(matrix(nrow = length(usage_threshold), ncol = 3))
+      
+      thetaparm[colnames(explore_parms_sub)] <- explore_parms_sub[j,]
+      
+      for(x in 1:length(usage_threshold)) {
+        thetaparm[["psi"]] <- usage_threshold[x]
+        output1 <- data.frame(matrix(nrow = 2, ncol =3))
+
+        for (i in 1:2) {
+          thetaparm["tau"] <- c(0, UK_amp_usage)[i]
+          out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
+          
+          output1[i,] <- c(c(0, UK_amp_usage)[i],
+                           ((sum(out[[1]][5:26]))*(446000000))/100000,
+                           sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
+        }
+        
+        colnames(output1) <- c("tau", "ICombH","IResRat")
+        
+        usage_frame[x,] <- c((1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100,    
+                             usage_threshold[x],
+                             j) #run
+      }
+      colnames(usage_frame) <- c("relchange", "domusage", "run_no")
+      usage_frame$normchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
+      usage_frame$explore <- c("homo", "skew")[z]
+      explore_sublist <- rbind(usage_frame, explore_sublist)
+      print(paste0( c("homo", "skew")[z], " | " ,(j / nrow(explore_parms_sub))*100 , "%"))
+      
+      }
+    return(explore_sublist)
+  })
+}
+
+comb_explore_list <- list()
+
+for(i in 1:2) {
+  temp <- aggregate(relchange ~ domusage, explore_parms_frame[[i]], mean)
+  temp$parms <- c("homo", "skew")[i]
+  temp$max <- aggregate(relchange ~ domusage, explore_parms_frame[[i]], max)[,2]
+  temp$min <- aggregate(relchange ~ domusage, explore_parms_frame[[i]], min)[,2]
+  comb_explore_list[[i]] <- temp
+}
+
+
+#Run Baseline
+
+thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
+              
+              share1 = country_data_imp[2,"Normalised_Usage_2018"], share2 = country_data_imp[3,"Normalised_Usage_2018"], share3 = country_data_imp[4,"Normalised_Usage_2018"], 
+              share4 = country_data_imp[5,"Normalised_Usage_2018"], share5 = country_data_imp[6,"Normalised_Usage_2018"], share6 = country_data_imp[7,"Normalised_Usage_2018"], 
+              share7 = country_data_imp[8,"Normalised_Usage_2018"], share8 = country_data_imp[9,"Normalised_Usage_2018"], 
+              share9 = country_data_imp[10,"Normalised_Usage_2018"], share_nEU = 1 - sum(country_data_imp[2:10,"Normalised_Usage_2018"]),
+              
+              betaAA = MAP_parms["betaAA", 2], phi = MAP_parms["phi", 2], kappa = MAP_parms["kappa", 2], alpha = MAP_parms["alpha", 2], 
+              zeta = MAP_parms["zeta", 2], betaHA = MAP_parms["betaHA", 2], imp_nEU = MAP_parms["imp_nEU", 2], propres_impnEU = MAP_parms["propres_impnEU", 2], 
+              
+              fracimp1 = country_data_imp[2,"FBD_gen"], fracimp2 = country_data_imp[3,"FBD_gen"], fracimp3 = country_data_imp[4,"FBD_gen"], 
+              fracimp4 = country_data_imp[5,"FBD_gen"], fracimp5 = country_data_imp[6,"FBD_gen"], fracimp6 = country_data_imp[7,"FBD_gen"], 
+              fracimp7 = country_data_imp[8,"FBD_gen"], fracimp8 = country_data_imp[9,"FBD_gen"],
+              fracimp9 = country_data_imp[9,"FBD_gen"], fracimp_nEU = country_data_imp[10,"FBD_gen"],
+              
+              propres_imp1 = country_data_imp[2,"FBD_res"], propres_imp2 = country_data_imp[3,"FBD_res"], propres_imp3 = country_data_imp[4,"FBD_res"], propres_imp4 = country_data_imp[5,"FBD_res"], 
+              propres_imp5 = country_data_imp[6,"FBD_res"], propres_imp6 = country_data_imp[7,"FBD_res"], propres_imp7 = country_data_imp[8,"FBD_res"], propres_imp8 = country_data_imp[9,"FBD_res"], 
+              propres_imp9 = country_data_imp[10,"FBD_res"],
+              
+              eta = 0.11016, tau = UK_amp_usage)
+
+usage_frame_baseline <- data.frame(matrix(nrow = length(usage_threshold), ncol = 2))
+
+for(x in 1:length(usage_threshold)) {
+  thetaparm[["psi"]] <- usage_threshold[x]
+  output1 <- data.frame(matrix(nrow = 2, ncol =3))
   
-  for(x in 1:length(usage_threshold)) {
-    parms[["psi"]] <- usage_threshold[x]
-    output1 <- data.frame(matrix(nrow = 2, ncol =3))
-    dump_data <- vector()
+  for (i in 1:2) {
+
+    thetaparm["tau"] <- c(0, UK_amp_usage)[i]
+    out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
     
-    for (i in 1:2) {
-      
-      temp <- vector()
-      parms["tau"] <- parmtau1[i]
-      out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = parms)
-      
-      output1[i,] <- c(parmtau1[i],
-                       ((sum(out[[1]][5:26]))*(446000000))/100000,
-                       sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
-    }
-    
-    colnames(output1) <- c("tau", "ICombH","IResRat")
-    
-    usage_frame[x,] <- c((1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100,    
-                         usage_threshold[x])
+    output1[i,] <- c(c(0, UK_amp_usage)[i],
+                     ((sum(out[[1]][5:26]))*(446000000))/100000,
+                     sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
   }
   
-  colnames(usage_frame) <- c("relchange", "domusage")
-  usage_frame$normchange <- (usage_frame$relchange / usage_frame$relchange[usage_frame$domusage == 0.656]) * 100
+  colnames(output1) <- c("tau", "ICombH","IResRat")
   
-  return(usage_frame)
+  usage_frame_baseline[x,] <- c(usage_threshold[x],
+                                (1-(output1$IResRat[output1$tau == 0] / output1$IResRat[output1$tau == UK_amp_usage]))*100)
 }
 
-# Granular Contamination/Resistance (Incremental) Sensitivity ---------------------------
+colnames(usage_frame_baseline) <- c("domusage", "relchange")
 
-amp_cont_data_incr <- data.frame(matrix(NA, ncol = 10, nrow = 0))
-amp_res_data_incr <- data.frame(matrix(NA, ncol = 10, nrow = 0))
-amp_eta_incr <- data.frame("eta" = seq(0, 0.5, by = 0.5/10))
+#usage_frame_baseline$normchange <- (usage_frame_baseline$relchange / usage_frame_baseline$relchange[usage_frame_baseline$domusage == 0.656]) * 100
 
-for(i in 1:16) {
-  tempcut <- rep(c(seq(0,0.3, by = 0.02))[i], 10)
-  amp_cont_data_incr <- rbind(amp_cont_data_incr, tempcut)
-  colnames(amp_cont_data_incr) <- grep("fracimp", names(thetaparm), value=TRUE)
-}
+usage_frame_baseline$parms <- "baseline"
+usage_frame_baseline$max <- 0
+usage_frame_baseline$min <- 0
 
-for(i in 1:11) {
-  temp <- rep(c(seq(0,1, by = 0.1))[i], 10)
-  amp_res_data_incr <- rbind(amp_res_data_incr, temp)
-  colnames(amp_res_data_incr) <- grep("propres_imp", names(thetaparm), value=TRUE)
-}
+comb_explore_list[[length(comb_explore_list)+1]] <- usage_frame_baseline
 
-data_list_incr <- list(amp_cont_data_incr, amp_res_data_incr, amp_eta_incr)
+# Stratified Plotting -----------------------------------------------------
 
-#Run the Scenario Analysis
-data_imp_list_incr <- list()
+plot_imp <- list()
 
-for(j in 1:4){
-  data_imp_list_incr[[j]] <- local ({
-    if(j == 1) {
-      output <- import_res_func(thetaparm, init, usage_threshold, UK_amp_usage)
-      print("base")
-      
-    } else {
-      output <- list()
-      parms_list <- data_list_incr[[j-1]]
-      parms1 <- thetaparm
-      
-      for(i in 1:nrow(parms_list)) {
-        parms1[colnames(parms_list)] <- parms_list[i,]
-        out <- import_res_func(parms1, init, usage_threshold, UK_amp_usage)
-        output[[i]] <- out 
-        print(paste0(c("base", "cont", "res", "eta")[j], " - ", i/nrow(parms_list)))
-      }
-    }
-    return(output)
-  })
-}
+for(i in 1:2) {
+  comb_plot <- rbind(comb_explore_list[[3]], comb_explore_list[[i]])
+  labs <- c("Beta"*"("*alpha*"="*1*", "*beta*"="~1*")", "Beta"*"("*alpha*"="*0.5*", "*beta*"="~2*")")[i]
 
-#[[3]][[1]]
-#Res = 0 
-#Domestic Usage is 0
-
-#Plot the Incremental Analysis 
-p_incr_list <- list()
-
-for(i in 1:3) {
-  p_incr_list[[i]] <- local ({
+  dist_plots <- data.frame("y" = dbeta(seq(0, 1, by = 0.01), c(1, 0.5)[i], c(1,2)[i]),
+                           "x" = seq(0, 1, by = 0.01))
+  
+  dist <- ggplot(dist_plots, aes(x=x, y = y)) + geom_line(size = 1.2) + theme_bw() + 
+    theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text.x =element_text(size=12), 
+          axis.text.y = element_blank(), 
+          axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0,0,0,0), "cm"),
+          legend.spacing.x = unit(0.3, 'cm')) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) + 
+    labs(x = "Probability", y = "") + scale_color_manual(values = c("darkblue", "red"))
     
-    data <- as.data.frame(cbind(sapply(data_imp_list_incr[[i+1]], "[[", 1))) # the 1 at the end refers to either normalised or un-normalised change in FBD
-    colnames(data) <- sapply((list(amp_cont_data_incr[,1], amp_res_data_incr[,1], 1-amp_eta_incr[,1])[[i]])*100, function(x) paste0(x, "%"))
-    data$Baseline <- data_imp_list_incr[[1]][,1]
-    data$usage <- c(seq(0, 1, by = 0.02), 0.656)
-    
-    plot_cont <- melt(data, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
-    print(max(plot_cont$value, na.rm = T)*1.2)
-    p_incr <- ggplot(plot_cont, aes(x = usage, y = value, col = variable, size = variable, lty = variable)) + geom_line() +
-      scale_color_manual(values = c(viridis::viridis((ncol(data)-2)), "red")) +
-      scale_size_manual(values = c(rep(1, (ncol(data)-2)), 2)) + 
-      scale_linetype_manual(values = c(rep(1, (ncol(data)-2)), 2)) + theme_bw() + 
-      theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
-            axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-            legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins (Psi)", 
-                                                       y = "Efficacy of Curtailment (EoC)", 
-                                                       color = c("Proportion Imports Contaminated", "Proportion Imports Resistant",
-                                                                 "Extent of Reduction Prevalence \n to Contamination ")[i]) +
-      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
+  p_import_comp <- ggplot(comb_plot, aes(x = domusage, y = relchange, col = parms, lty = parms)) +  theme_bw() + 
+    theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+          axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+          legend.spacing.x = unit(0.3, 'cm')) + 
+    geom_ribbon(aes(ymin = min, ymax = max), fill = "grey70", col = "black", alpha = 0.7) + geom_line(size = 1.2) +
+    labs(x ="Proportion of Food From Domestic Origins (Psi)", 
+         y = "Efficacy of Curtailment (EoC)",
+         col = "Heterogeneity \n in Import") +
+    scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) + 
+    scale_color_manual(labels = c("Baseline", labs), 
+                       values = c("red", "black"))+ 
+    scale_linetype_manual(values = c(2,1)) + guides(linetype = "none")
   
-  ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res", "eta")[i] ,".png"), dpi = 300, type = "cairo", width = 9, height = 7, units = "in",
-         path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+  plot.with.inset <- ggdraw() +
+    draw_plot(p_import_comp) +
+    draw_plot(dist, x = 0.125, y = .65, width = .3, height = .3)
   
-  return(p_incr)
-  })
+  plot_imp[[i]] <- plot.with.inset
 }
 
-com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
-#com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 1, ncol = 3, labels = c("A", "B", "C"), font.label = c(size = 20))
+p_dist <- ggarrange(plot_imp[[1]], plot_imp[[2]], nrow = 2,ncol = 1, labels = c("A", "B"), font.label = c(size = 20))
 
-
-ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
-#ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 20, height = 7, units = "in",
-#       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
-
-# Testing -----------------------------------------------------------------
-
-output <- data.frame()
-
-for(i in 1:length(data_imp_list_incr[[2]])) {
-  temp <- data_imp_list_incr[[2]][[i]]
-  temp$normchange <- (temp$relchange / temp$relchange[temp$domusage == 0.656]) * 100
-  temp$group <- as.factor(seq(0,0.3, by = 0.02)[i])
-  print(temp)
-  output <- rbind(output, temp)
-}
-
-output[output$domusage == 0.656,]
-
-ggplot(output, aes(y= normchange,x = domusage, col = group)) + geom_line()
-
-ggplot(output, aes(y= relchange ,x = domusage, col = group)) + geom_line()
-
-# Plotting Baseline Model -------------------------------------------------
-
-output_base <- import_res_func(thetaparm, init, usage_threshold, UK_amp)
-
-# Coordinates of the upper and lower areas
-trsup <- data.frame(x=c(0,0,1), y=c(0,max(output_base$relchange),max(output_base$relchange))) 
-trinf <- data.frame(x=c(0,1,1), y=c(0,0,max(output_base$relchange)))
-
-c("More than proportional decrease in efficacy", "Less than proportional decrease in efficacy")
-max(output_base$relchange)
-# Use geom_polygon for coloring the two areas
-
-p_base <- ggplot(data=output_base, aes(x=domusage, y=relchange)) +
-  geom_polygon(aes(x=x, y=y), data=trsup, fill="#00FF0066") +
-  geom_polygon(aes(x=x, y=y), data=trinf, fill= "#FF000066") +
-  geom_abline(intercept = 0, slope = max(output_base$relchange), size = 3) +
-  geom_line(color = "red", size = 1.5, lty = 3) + theme_bw() +
-  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
-  labs(x ="Proportion of Food From Domestic Origins", y = "Efficacy of Curtailment (EoC)", 
-       color = "Density") +
-  theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))  +
-  annotate("text", x = c(0.25, 0.75), y = c(max(output_base$relchange)*0.75, max(output_base$relchange)*0.25), 
-           label = c('atop("Less than proportional \n decrease in efficacy", bold("(less impact of import)"))',
-                                                               'atop("More than proportional \n decrease in efficacy", bold("(greater impact of import)"))'),
-           size = 4, col = "black", parse = TRUE)
-
-ggsave(p_base, filename = paste0("base_plot_import.png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
+ggsave(p_dist, filename = "dist_uncert_sample.png", dpi = 300, type = "cairo", width = 7, height = 11, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
