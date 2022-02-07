@@ -367,12 +367,18 @@ for(i in 1:3) {
   })
 }
 
-com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
+#com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
 #com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 1, ncol = 3, labels = c("A", "B", "C"), font.label = c(size = 20))
 
+isol_com_imp <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], nrow = 2, ncol = 1, labels = c("A", "B"), font.label = c(size = 20))
 
-ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
+ggsave(isol_com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 8, height = 11, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+ggsave(p_incr_list[[3]], filename = "isol_eta_anal.png", dpi = 300, type = "cairo", width = 7, height = 8, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+#ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
+#       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 #ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 20, height = 7, units = "in",
 #       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 

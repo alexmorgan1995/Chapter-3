@@ -377,7 +377,7 @@ geom_errorbar(aes(ymin=Lower_Amp , ymax=Upper_Amp, color = Country),  size=1.01,
 
 # Combined Plot -----------------------------------------------------------
 
-comb_gen <- ggarrange(plot_list[[1]][[2]], model_fit_gen, labels = c("A", "B"), font.label = c(size = 20),
+comb_gen <- ggarrange(model_fit_gen, plot_list[[1]][[2]] , labels = c("A", "B"), font.label = c(size = 20),
                       nrow = 1, ncol = 2, align = "h")
 
 ggsave(comb_gen, filename = "baseplot_andfits_gen.png", dpi = 300, type = "cairo", width = 15, height = 6, units = "in", 

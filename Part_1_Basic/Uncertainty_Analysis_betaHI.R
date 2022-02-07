@@ -187,7 +187,7 @@ for(k in 1:3) {
 
 # Plotting Res ----------------------------------------------------------------
 
-plot_list <- list()
+plot_list1 <- list()
 
 for(i in 1:3) { 
   
@@ -225,24 +225,31 @@ for(i in 1:3) {
     metR::geom_text_contour(col = "white",nudge_y = 0, fontface = "bold", size = 5, breaks = breaks1, label.placer = metR::label_placer_fraction(frac = 0.5),
                             stroke = 0.05, stroke.color = "black")
   
-  plot_list[[i]] <- list(heat_gen, heat_pig)
+  plot_list1[[i]] <- list(heat_gen, heat_pig)
 }
 
 
-p1 <- ggarrange(plot_list[[1]][[1]], plot_list[[1]][[2]],
-          plot_list[[2]][[1]], plot_list[[2]][[2]],
-          plot_list[[3]][[1]], plot_list[[3]][[2]],
+p1 <- ggarrange(plot_list1[[1]][[1]], plot_list1[[1]][[2]],
+          plot_list1[[2]][[1]], plot_list1[[2]][[2]],
+          plot_list1[[3]][[1]], plot_list1[[3]][[2]],
           ncol = 2, nrow = 3, labels = c("A","", "B", "", "C", ""), font.label = list(size = 20), vjust = 1.2)
 
 ggsave(p1, filename = "heat_comb_eta.png", dpi = 300, type = "cairo", width = 14, height = 17, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
-p_isol <- ggarrange(plot_list[[2]][[1]], plot_list[[2]][[2]],
+
+
+
+# Isolating Res ----------------------------------------------------------
+
+p_isol_res_656 <- plot_list1[[2]][[1]] + labs(title = expression(Domestic~Food~Usage~(psi)~"="~0.656)) 
+p_isol_res_4455 <- plot_list1[[2]][[2]] + labs(title = expression(Domestic~Food~Usage~(psi)~"="~0.4455)) 
+  
+p_isol <- ggarrange(p_isol_res_656,p_isol_res_4455,
           ncol = 1, nrow = 2, labels = c("A","B"), font.label = list(size = 20), vjust = 1.2)
 
 ggsave(p_isol, filename = "heat_comb_res_isol.png", dpi = 300, type = "cairo", width = 7, height = 11, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
-
 
 # Plotting FBD ----------------------------------------------------------------
 
@@ -296,4 +303,13 @@ p2 <- ggarrange(plot_list[[1]][[1]], plot_list[[1]][[2]],
 ggsave(p2, filename = "heat_comb_eta_fbd.png", dpi = 300, type = "cairo", width = 14, height = 17, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
+# Isolating FBD ----------------------------------------------------------
 
+p_isol_fbd_656 <- plot_list[[2]][[1]] + labs(title = expression(Domestic~Food~Usage~(psi)~"="~0.656)) 
+p_isol_fbd_4455 <- plot_list[[2]][[2]] + labs(title = expression(Domestic~Food~Usage~(psi)~"="~0.4455)) 
+
+p_isol_fbd <- ggarrange(p_isol_fbd_656,p_isol_fbd_4455,
+                    ncol = 1, nrow = 2, labels = c("A","B"), font.label = list(size = 20), vjust = 1.2)
+
+ggsave(p_isol_fbd, filename = "heat_comb_fbd_isol.png", dpi = 300, type = "cairo", width = 7, height = 11, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")

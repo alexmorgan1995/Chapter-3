@@ -540,7 +540,7 @@ inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value)) + the
 # Base Fit and Attribution Plot -------------------------------------------
 
 
-p_comb_res <- ggarrange(inf_comb, res_comb,  p_rib_amp_pig, labels = c("A", "B", "C"), font.label = c(size = 20),
+p_comb_res <- ggarrange(p_rib_amp_pig, inf_comb, res_comb, labels = c("A", "B", "C"), font.label = c(size = 20),
                         nrow = 3, ncol = 1)
 
 ggsave(p_comb_res, filename = "base_anal_complex.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
@@ -593,11 +593,6 @@ ggplot(plot_check_hum, mapping = aes(x = tau)) + geom_line(aes(y = model_estim),
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + geom_vline(xintercept = UK_amp_usage, col = "red", size = 1.2, lty = 2)
-
-
-
-
-
 
 
 # Psi Compare -------------------------------------------------------------
