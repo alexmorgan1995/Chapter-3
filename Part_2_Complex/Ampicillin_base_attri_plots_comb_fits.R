@@ -349,7 +349,8 @@ p_rib_amp_pig <- ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Co
   geom_ribbon(data = HDI_ribbon,
               aes(x = tau ,ymin = lowHDI, ymax = highHDI), fill = "hotpink", alpha = 0.7, inherit.aes=FALSE) +
   theme(legend.text=element_text(size=12), axis.text=element_text(size=12),legend.position = "bottom",
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm")) 
+        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm")) + 
+  geom_point(x = UK_amp_usage, y = UK_amp_res, size = 5, col = "red", shape  = 22, fill = "red", alpha = 0.1)
 
 ggsave(p_rib_amp_pig, filename = "Model_Fits_v1.png", dpi = 300, type = "cairo", width = 8, height = 6, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
@@ -516,7 +517,8 @@ res_comb <- ggplot(res_plotdata, aes(fill = variable, x = tau, y = value)) + the
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'))  +
-  labs(x ="Domestic Ampicillin Usage in Fattening Pig (g/PCU)", y = "Proportion of Human Salmnellosis Resistant to Ampicillin", fill = "Resistance Source")  
+  labs(x ="Domestic Ampicillin Usage in Fattening Pig (g/PCU)", y = "Proportion of Human Salmnellosis Resistant to Ampicillin", fill = "Resistance Source")  + 
+  geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2)  
 
 #Normalised resistance
 res_norm_comb <- ggplot(res_norm_plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() +  
@@ -534,7 +536,8 @@ inf_comb <- ggplot(inf_plotdata, aes(fill = variable, x = tau, y = value)) + the
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm')) + 
-  geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2)
+  geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2)  
+  
 
 
 # Base Fit and Attribution Plot -------------------------------------------
