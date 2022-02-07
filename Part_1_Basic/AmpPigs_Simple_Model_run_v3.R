@@ -171,7 +171,6 @@ for(j in 1:2) {
                    id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
   
   p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
-    geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2) + 
     geom_col(color = "black",position= "stack", width  = 0.0005) + scale_x_continuous(expand = c(0, 0.0005)) + 
     scale_y_continuous(limits = c(0,1), expand = c(0, 0))  + 
     geom_text(label= c(round(tauoutput$IResRat, digits = 2), rep("",length(parmtau))), vjust=-0.5, hjust = 0.05,
@@ -180,7 +179,8 @@ for(j in 1:2) {
           axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
           legend.spacing.x = unit(0.3, 'cm')) + 
     scale_fill_manual(labels = c("Antibiotic-Resistant Infection", "Antibiotic-Sensitive Infection"), values = c("#F8766D", "#619CFF")) +
-    labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") 
+    labs(x ="Generic Antibiotic Usage (g/PCU)", y = "Infected Humans (per 100,000)") + 
+    geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2) 
   
   plot_list[[j]] <- list(tauoutput, p_base)
 }
