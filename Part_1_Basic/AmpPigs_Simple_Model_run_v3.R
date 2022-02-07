@@ -171,7 +171,7 @@ for(j in 1:2) {
                    id.vars = c("tau"), measure.vars = c("ResInfHumans","InfHumans")) 
   
   p_base <- ggplot(plotdata, aes(fill = variable, x = tau, y = value)) + theme_bw() + 
-    geom_vline(xintercept = UK_amp_usage, alpha = 0.3, size = 2) + 
+    geom_vline(xintercept = UK_amp_usage, size = 1.2, col = "red", lty = 2) + 
     geom_col(color = "black",position= "stack", width  = 0.0005) + scale_x_continuous(expand = c(0, 0.0005)) + 
     scale_y_continuous(limits = c(0,1), expand = c(0, 0))  + 
     geom_text(label= c(round(tauoutput$IResRat, digits = 2), rep("",length(parmtau))), vjust=-0.5, hjust = 0.05,
