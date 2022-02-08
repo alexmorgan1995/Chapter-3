@@ -2,8 +2,8 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -198,16 +198,17 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
 #post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
 #MAP_parms <- map_estimate(post_amp)
 #MAP_parms <- data.frame("Parameter" = names(post_amp), 
 #                        "MAP_Estimate" = colMeans(post_amp))
 
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
-post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
+post_amp <- read.csv(tail(list.files(path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))
@@ -360,8 +361,8 @@ for(i in 1:3) {
                                                                  "Extent of Reduction Prevalence \n to Contamination ")[i]) +
       scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
   
-  ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res", "eta")[i] ,".png"), dpi = 300, type = "cairo", width = 9, height = 7, units = "in",
-         path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+  #ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res", "eta")[i] ,".png"), dpi = 300, type = "cairo", width = 9, height = 7, units = "in",
+ #        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
   
   return(p_incr)
   })
@@ -408,7 +409,6 @@ output_base <- import_res_func(thetaparm, init, usage_threshold, UK_amp)
 trsup <- data.frame(x=c(0,0,1), y=c(0,max(output_base$relchange),max(output_base$relchange))) 
 trinf <- data.frame(x=c(0,1,1), y=c(0,0,max(output_base$relchange)))
 
-c("More than proportional decrease in efficacy", "Less than proportional decrease in efficacy")
 max(output_base$relchange)
 # Use geom_polygon for coloring the two areas
 
@@ -424,9 +424,9 @@ p_base <- ggplot(data=output_base, aes(x=domusage, y=relchange)) +
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'))  +
   annotate("text", x = c(0.25, 0.75), y = c(max(output_base$relchange)*0.75, max(output_base$relchange)*0.25), 
-           label = c('atop("Less than proportional \n decrease in efficacy", bold("(less impact of import)"))',
-                                                               'atop("More than proportional \n decrease in efficacy", bold("(greater impact of import)"))'),
+           label = c('atop(bold("Lower impact of \n import on EoC"))',
+                     'atop(bold("Greater impact of \n import on EoC"))'),
            size = 4, col = "black", parse = TRUE)
 
 ggsave(p_base, filename = paste0("base_plot_import.png"), dpi = 300, type = "cairo", width = 7, height = 7, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Figures")
