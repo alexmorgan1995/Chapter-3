@@ -79,7 +79,7 @@ ggsave(plot_amppig, filename = "pairs_plot_amppig_hetero.png", dpi = 300, type =
 
 # Diagnostic Plots -------------------------------------------------------
 
-ampRDS <- lapply(list.files(pattern = ".rds"), readRDS)[[1]]
+ampRDS <- lapply(list.files(pattern = ".RDS"), readRDS)[[1]]
 
 #Create a list of the RDSs
 
