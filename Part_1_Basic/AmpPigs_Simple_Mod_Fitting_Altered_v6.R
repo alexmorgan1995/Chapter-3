@@ -3,7 +3,7 @@ library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolv
 library("Rcpp")
 
 rm(list=ls())
-setwd("/localdisk/home/s1678248/Parallel_Testing/Chapter_3/Data/New")
+setwd("csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -33,6 +33,7 @@ amrimp <- function(t, y, parms) {
     return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh), CumS, CumR))
   })
 }
+
 
 
 # Livestock Dynamics Dataset ----------------------------------------------
@@ -86,19 +87,19 @@ country_data_imp <- read.csv("ImportDat_AmpPigs_update.csv") #This is data for p
 country_data_imp[country_data_imp$Country_of_Origin == "UK Origin",23] <- NA
 isolamp_hum_raw <- read.csv("UK_parameterisation.csv")
 
-UK_hum_ampres <- rowMeans(isolamp_hum_raw[,24:27], na.rm = T)[2]
-UK_amp_res <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",24:27], na.rm = T )) 
-UK_amp_usage <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",28:31]))/1000
-UK_cont <- as.numeric(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",23])
+UK_hum_ampres <- rowMeans(isolamp_hum_raw[,25:28], na.rm = T)[2]
+UK_amp_res <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",25:28], na.rm = T )) 
+UK_amp_usage <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",29:32]))/1000
+UK_cont <- as.numeric(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",24])
 UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
 
-
+UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
+UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",4]
 
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
-EU_cont <- mean(rowMeans(country_data_imp[-1,22:25], na.rm = T))
-EU_res <- mean(rowMeans(country_data_imp[-1,26:29], na.rm = T))
-
+EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
+EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
 #### Approximate Bayesian Computation - SMC ####
 

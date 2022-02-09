@@ -2,13 +2,12 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr")
 
 rm(list=ls())
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha")
-
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
 
 # Posterior Distributions -------------------------------------------------
 
-post_dist_names <- grep("amppigs_gen",
-                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha"), value = TRUE)
+post_dist_names <- grep("complex",
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha"), value = TRUE)
 
 #final_amp_post <- read.csv(tail(grep(list.files(), pattern =  "amppigs_gen", value = TRUE),1))
 
@@ -17,14 +16,14 @@ post_dist <- mapply(cbind, post_dist, "gen" = sapply(1:length(post_dist), functi
                     SIMPLIFY=F)
 post_dist <- do.call("rbind", post_dist)
 
-maps_est <- data.frame("Parameters" = colnames(post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][1:6]), 
-                       "MAP_Estimate" = colMeans(post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][1:6]))
+maps_est <- data.frame("Parameters" = colnames(post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][1:8]), 
+                       "MAP_Estimate" = colMeans(post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][1:8]))
 
 p_list <- list()
 
 for(i in 1:(length(post_dist)-1)) {
   p_list[[i]] <- local ({
-    name_exp <- post_dist[,c(i,7)]
+    name_exp <- post_dist[,c(i,9)]
     p <- ggplot(name_exp, aes(x= name_exp[,1], fill=gen)) + geom_density(alpha=.5) +  theme_bw()  +
       geom_vline(xintercept = maps_est[i,2], size = 1.2, col = "red") +
       scale_x_continuous(expand = c(0, 0), name = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
@@ -32,7 +31,9 @@ for(i in 1:(length(post_dist)-1)) {
                                                     expression(paste("Efficacy of Antibiotic-Mediated Recovery (", kappa, ")")), 
                                                     expression(paste("Antibiotic-Resistant Fitness Cost (", alpha, ")")), 
                                                     expression(paste("Background Infection Rate (", zeta, ")")),
-                                                    expression(paste("Rate of Animal-to-Human Transmission (", beta[HA], ")")))[i]) + 
+                                                    expression(paste("Rate of Animal-to-Human Transmission (", beta[HA], ")")),
+                                                    expression(paste("Proportion of Contaminated Imports (", Frac[Imp], ")")),
+                                                    expression(paste("Proportion of Ampicillin-Resistant Cont Imports (", PropRes[Imp], ")")))[i]) + 
       scale_y_continuous(expand = c(0, 0), name = " ") +  
       theme(legend.text=element_text(size=10), axis.text.x=element_text(size=10),axis.ticks.y=element_blank(), axis.text.y=element_blank(),
             axis.title.y=element_text(size=10), axis.title.x= element_text(size=10), plot.margin = unit(c(0.25,0.4,0.15,0.55), "cm"),
@@ -46,16 +47,17 @@ for(i in 1:(length(post_dist)-1)) {
 abc <- ggarrange(p_list[[1]], p_list[[2]], 
                  p_list[[3]], p_list[[4]], 
                  p_list[[5]], p_list[[6]], 
-                 nrow = 3, ncol =2, 
+                 p_list[[7]], p_list[[8]], 
+                 nrow = 4, ncol =2, 
                  font.label = c(size = 20), common.legend = TRUE, legend = "bottom",
                  align = "hv", vjust = 1.05)
 
-ggsave(abc, filename = "ABC_SMC_Post_homo.png", dpi = 300, width = 8, height = 8, units = "in",
+ggsave(abc, filename = "ABC_SMC_Post_het.png", dpi = 300, width = 9, height = 8, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # Pairs Plot --------------------------------------------------------------
 
-final_amp_post <- read.csv(tail(grep(list.files(), pattern =  "amppigs_gen", value = TRUE),1))
+final_amp_post <- read.csv(tail(grep(list.files(), pattern =  "complex", value = TRUE),1))
 
 plot_lower <- function(data, mapping){
   p <- ggplot(data = data, mapping = mapping) + scale_x_continuous(expand = c(0,0))  + scale_y_continuous(expand = c(0,0)) + 
@@ -72,7 +74,7 @@ plot_diag <- function(data, mapping){
 
 plot_amppig <- GGally::ggpairs(final_amp_post, lower=list(continuous=plot_lower), diag = list(continuous = plot_diag)) + theme_bw()
 
-ggsave(plot_amppig, filename = "pairs_plot_amppig.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in",
+ggsave(plot_amppig, filename = "pairs_plot_amppig_hetero.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # Diagnostic Plots -------------------------------------------------------
@@ -128,5 +130,5 @@ diag_plots <- ggarrange(p_diag_list[[1]], p_diag_list[[2]], p_diag_list[[3]], p_
                         p_diag_list[[5]], NULL,
                         ncol = 2, nrow = 3)
 
-ggsave(diag_plots, filename = "diag_plots_homofit.png", dpi = 300, width = 8, height = 11, units = "in",
+ggsave(diag_plots, filename = "diag_plots_heterofit.png", dpi = 300, width = 8, height = 11, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
