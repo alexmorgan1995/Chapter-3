@@ -202,7 +202,7 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
       scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(limits = c(0, max(na.omit(output$rel_FBD)*1.1)), expand = c(0, 0)) +
       labs(x = plotnames) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title.y=element_blank())
     
-    p4 <- ggplot(output, aes(x = as.numeric(ParmValue), y = as.numeric(rel_Res))) + theme_bw() + geom_line(lwd = 1.02, col ="darkblue") +
+    p4 <- ggplot(output, aes(x = as.numeric(ParmValue), y = as.numeric(rel_Res)*100)) + theme_bw() + geom_line(lwd = 1.02, col ="darkblue") +
       scale_x_continuous(expand = c(0, 0)) + scale_y_continuous( expand = c(0, 0)) +
       labs(x = plotnames) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.title.y=element_blank())
     
@@ -231,7 +231,7 @@ prel_FBD <- plot_grid(plot_grid(suppplotlist[[1]][[3]], suppplotlist[[2]][[3]], 
 prel_res <- plot_grid(plot_grid(suppplotlist[[1]][[4]], suppplotlist[[2]][[4]], suppplotlist[[3]][[4]],suppplotlist[[4]][[4]], suppplotlist[[5]][[4]], 
                                   suppplotlist[[6]][[4]], suppplotlist[[7]][[4]], suppplotlist[[8]][[4]], suppplotlist[[9]][[4]], suppplotlist[[10]][[4]], suppplotlist[[11]][[4]],
                                   suppplotlist[[12]][[4]], suppplotlist[[13]][[4]], suppplotlist[[14]][[4]],  nrow = 5, ncol =3), scale=0.95) + 
-  draw_label("rel_Res", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
+  draw_label("Efficacy of Curtailment (%)", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 ggsave(pdelta_FBD, filename = "delta_FBD_parm_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")

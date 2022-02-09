@@ -193,6 +193,15 @@ p_pig <- plot_list[[2]][[2]]
 ggsave(p_pig, filename = "baseplot_pigs.png", dpi = 300, type = "cairo", width = 10, height = 6, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
+p_comb_psi <- ggarrange(plot_list[[1]][[2]], plot_list[[2]][[2]],
+                ncol = 1, nrow = 2, labels = c("A", "B"), font.label = list(size = 20), vjust = 1.2)
+
+ggsave(p_comb_psi, filename = "baseline_run_psi_homo.png", dpi = 300, type = "cairo", width = 7, height = 8, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+
+
 ggplot(tauoutput, aes(x = tau, y = ICombA*0.11)) + theme_bw() + geom_line() + 
   geom_point(aes(x = UK_amp_usage, y = UK_cont), size = 2, col = "red")
 ggplot(tauoutput, aes(x = tau, y = ICombH)) + theme_bw() + geom_line()+ 
