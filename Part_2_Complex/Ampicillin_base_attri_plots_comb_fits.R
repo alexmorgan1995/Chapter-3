@@ -549,6 +549,10 @@ p_comb_res <- ggarrange(p_rib_amp_pig, inf_comb, res_comb, labels = c("A", "B", 
 ggsave(p_comb_res, filename = "base_anal_complex.png", dpi = 300, type = "cairo", width = 8, height = 14, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
+ggsave(res_norm_comb, filename = "normres_base_anal_complex.png", dpi = 300, type = "cairo", width = 8, height = 7, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
 
 # Fit to Data Checks -------------------------------------------------------------
 
