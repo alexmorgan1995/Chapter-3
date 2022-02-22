@@ -220,7 +220,7 @@ computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm,
     out <- runsteady(y = init.state, func = fitmodel, times = c(0, Inf), parms = parms2)
     
     tauoutput[i,] <- c(tau_range[i],
-                       ((sum(out[[1]][5:26]))*(446000000))/100000,
+                       ((out[[2]] + out[[3]])*(446000000))/100000,
                        (out[[1]][["Isa"]] + out[[1]][["Ira"]]), 
                        out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
                        sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
@@ -371,8 +371,8 @@ lm.low = c(0, 0, 0, 0, 0, 0, 0, 0)
 lm.upp = c(0.05, 0.1, 30, 1, 0.02, 0.02, 0.3, 1)
 
 # Empty matrices to store results (6 model parameters)
-res.old<-matrix(ncol=9,nrow=N)
-res.new<-matrix(ncol=9,nrow=N)
+res.old<-matrix(ncol=8,nrow=N)
+res.new<-matrix(ncol=8,nrow=N)
 
 # Empty vectors to store weights
 w.old<-matrix(ncol=1,nrow=N)
@@ -380,7 +380,7 @@ w.new<-matrix(ncol=1,nrow=N)
 
 #Thresholds 
 
-epsilon = list("dist" =  c(5 , 5, 5, 5, 5, 5, 5, 5),
+epsilon = list("dist" =  c(5, 5, 5, 5, 5, 5, 5, 5),
                "foodH" = c(0.593, 0.593*0.8, 0.593*0.6, 0.593*0.4, 0.593*0.3, 0.593*0.2, 0.593*0.15, 0.593*0.125),
                "AMRH" =  c(UK_hum_ampres, UK_hum_ampres*0.8, UK_hum_ampres*0.6, UK_hum_ampres*0.4, UK_hum_ampres*0.3, UK_hum_ampres*0.2, UK_hum_ampres*0.15, UK_hum_ampres*0.125),
                "foodA" = c(UK_cont, UK_cont*0.8, UK_cont*0.6, UK_cont*0.4, UK_cont*0.3, UK_cont*0.2, UK_cont*0.15, UK_cont*0.125),
