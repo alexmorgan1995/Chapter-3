@@ -2,7 +2,6 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2"); 
 library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("cowplot"); library("lhs"); library("Surrogate"); library("rootSolve")
 
 rm(list=ls())
-#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
@@ -186,8 +185,8 @@ UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Li
 
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
-EU_cont <- mean(rowMeans(country_data_imp[,24:27], na.rm = T))
-EU_res <- mean(rowMeans(country_data_imp[28:31], na.rm = T))
+EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
+EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
 max(country_data_imp[24:27], na.rm = T)
 
@@ -196,88 +195,231 @@ country_data_imp[1, 25] <- NA
 country_data_imp$FBD_gen <- rowMeans(country_data_imp[,24:27], na.rm = T)
 country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
-# Import in Parameters and Set Baseline Parms -----------------------------
+# ABC Functions -----------------------------------------------------------
 
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch")
+#### Approximate Bayesian Computation - SMC ####
 
-post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch", pattern = "complex"), 1))
-MAP_parms <- map_estimate(post_amp)
-MAP_parms <- data.frame("Parameter" = names(post_amp), 
-                        "MAP_Estimate" = colMeans(post_amp))
-
-
-# Baseline Parms ----------------------------------------------------------
-
-thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
-              
-              share1 = country_data_imp[2,"Normalised_Usage_2018"], share2 = country_data_imp[3,"Normalised_Usage_2018"], share3 = country_data_imp[4,"Normalised_Usage_2018"], 
-              share4 = country_data_imp[5,"Normalised_Usage_2018"], share5 = country_data_imp[6,"Normalised_Usage_2018"], share6 = country_data_imp[7,"Normalised_Usage_2018"], 
-              share7 = country_data_imp[8,"Normalised_Usage_2018"], share8 = country_data_imp[9,"Normalised_Usage_2018"], 
-              share9 = country_data_imp[10,"Normalised_Usage_2018"], share_nEU = 1 - sum(country_data_imp[2:10,"Normalised_Usage_2018"]),
-              
-              betaAA = MAP_parms["betaAA", 2], phi = MAP_parms["phi", 2], kappa = MAP_parms["kappa", 2], alpha = MAP_parms["alpha", 2], 
-              zeta = MAP_parms["zeta", 2], betaHA = MAP_parms["betaHA", 2], imp_nEU = MAP_parms["imp_nEU", 2], propres_impnEU = MAP_parms["propres_impnEU", 2], 
-              
-              fracimp1 = country_data_imp[2,"FBD_gen"], fracimp2 = country_data_imp[3,"FBD_gen"], fracimp3 = country_data_imp[4,"FBD_gen"], 
-              fracimp4 = country_data_imp[5,"FBD_gen"], fracimp5 = country_data_imp[6,"FBD_gen"], fracimp6 = country_data_imp[7,"FBD_gen"], 
-              fracimp7 = country_data_imp[8,"FBD_gen"], fracimp8 = country_data_imp[9,"FBD_gen"],
-              fracimp9 = country_data_imp[9,"FBD_gen"], fracimp_nEU = country_data_imp[10,"FBD_gen"],
-              
-              propres_imp1 = country_data_imp[2,"FBD_res"], propres_imp2 = country_data_imp[3,"FBD_res"], propres_imp3 = country_data_imp[4,"FBD_res"], propres_imp4 = country_data_imp[5,"FBD_res"], 
-              propres_imp5 = country_data_imp[6,"FBD_res"], propres_imp6 = country_data_imp[7,"FBD_res"], propres_imp7 = country_data_imp[8,"FBD_res"], propres_imp8 = country_data_imp[9,"FBD_res"], 
-              propres_imp9 = country_data_imp[10,"FBD_res"],
-              
-              eta = 0.11016, tau = UK_amp_usage)
-
-init = c(Sa=0.98, Isa=0.01, Ira=0.01, 
-         Sh = 1,
-         IshDA = 0,IrhDA = 0,
-         IshA1 = 0,IrhA1 = 0,
-         IshA2 = 0,IrhA2 = 0,
-         IshA3 = 0,IrhA3 = 0,
-         IshA4 = 0,IrhA4 = 0,
-         IshA5 = 0,IrhA5 = 0,
-         IshA6 = 0,IrhA6 = 0,
-         IshA7 = 0,IrhA7 = 0,
-         IshA8 = 0,IrhA8 = 0,
-         IshA9 = 0,IrhA9 = 0,
-         IshAnEU = 0,IrhAnEU = 0)
-
-out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
-
-# Eta Analysis ------------------------------------------------------------
-
-eta_range <- seq(0, 0.5, 0.025)
-output1 <- data.frame(matrix(nrow = length(eta_range), ncol = 5))
-
-for(i in 1:length(eta_range)) {
-  thetaparm[["eta"]] <- eta_range[i]
-  
-  out <- runsteady(y = init, func = amrimp, times = c(0, Inf), parms = thetaparm)
-  
-  output1[i,] <- c(eta_range[i],
-                   (sum(out[[1]][2:3]))*thetaparm[["eta"]],
-                   out[[1]][2]*thetaparm[["eta"]],
-                   out[[1]][3]*thetaparm[["eta"]],
-                   out[[1]][3] / (out[[1]][2] + out[[1]][3]))
+prior.non.zero <- function(par, lm.low, lm.upp){
+  prod(sapply(1:8, function(a) as.numeric((par[a]-lm.low[a]) > 0) * as.numeric((lm.upp[a]-par[a]) > 0)))
 }
 
-colnames(output1) <- c("eta", "total", "sens", "res", "resprop")
+#Return the sum of squares between resistance and the model output
+sum_square_diff_dist <- function(data.obs, model.obs) {
+  sumsquare <- (data.obs$ResPropAnim - model.obs$ResPropAnim)^2
+  return(sum(sumsquare))
+}
 
-plotdata <- melt(output1, id.vars = c("eta"), measure.vars = c("sens","res")) 
+#Compute the distances for all 3 summary statistics - this section involves running the model
+computeDistanceABC_ALEX <- function(distanceABC, fitmodel, tau_range, thetaparm, init.state, data) {
+  tauoutput <- data.frame(matrix(nrow = length(tau_range), ncol = 5))
+  tau_range <- append(tau_range, UK_amp_usage)
+  parms2 = thetaparm
+  
+  for (i in 1:length(tau_range)) {
+    
+    parms2["tau"] = tau_range[i]
+    out <- runsteady(y = init.state, func = fitmodel, times = c(0, Inf), parms = parms2)
+    
+    tauoutput[i,] <- c(tau_range[i],
+                       ((out[[2]] + out[[3]])*(446000000))/100000,
+                       (out[[1]][["Isa"]] + out[[1]][["Ira"]])*parms2[["eta"]], 
+                       out[[1]][["Ira"]] / (out[[1]][["Isa"]] + out[[1]][["Ira"]]),
+                       sum(out[[1]][seq(6, 26, by = 2)]) / (sum(out[[1]][5:26])))
+  }
+  
+  colnames(tauoutput) <- c("tau", "IncH", "ICombA", "ResPropAnim", "ResPropHum")
+  
+  return(c(distanceABC(data, tauoutput[(!tauoutput$tau == UK_amp_usage & !tauoutput$tau == 0),]),
+           abs(tauoutput$IncH[tauoutput$tau == UK_amp_usage] - 0.593),
+           as.numeric(abs(tauoutput$ResPropHum[tauoutput$tau == UK_amp_usage] - UK_hum_ampres)),
+           abs(tauoutput$ICombA[tauoutput$tau == UK_amp_usage] - UK_cont),
+           abs(tauoutput$ResPropAnim[tauoutput$tau == UK_amp_usage] - UK_amp_res)))
+}
 
-eta_anal <- ggplot(plotdata, aes(fill = variable, x = eta, y = value)) + theme_bw() + 
-  geom_col(color = "black",position= "stack", width  = 0.025) + scale_x_continuous(expand = c(0, 0.025)) + 
-  scale_y_continuous(limits = c(0,0.2), expand = c(0, 0))  + 
-  geom_text(label= c(round(output1$resprop, digits = 2), rep("",length(eta_range))), vjust=-0.75,
-            position = "stack") +
-  theme(legend.position=c(0.7, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
-        axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
-        legend.spacing.x = unit(0.3, 'cm')) + 
-  scale_fill_manual(labels = c("Sensitive Domestic Carcass Contamination", "Resistant Domestic Carcass Contamination"), values = c("#F8766D", "#619CFF")) +
-  labs(x = expression(paste("Reduction in Livestock Carriage to Carcass Prevalence (", eta, ")")), 
-       y = "Proportion of Domestic Livestock Carcasses Contaminated")
+# Single Runs -------------------------------------------------------------
 
-ggsave(eta_anal, filename = "eta_anal.png", dpi = 300, type = "cairo", width = 9, height = 6, units = "in",
-       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+singlerun <- function(x, G, init.state, distanceABC, fitmodel, thetaparm, epsilon, 
+                      tau_range, data, lm.low, lm.upp, w.old, sigma, res.old, N) {
+  i <- 0
+  m <- 0
+  w.new <- 0
+  
+  while(i <= 1) {
+    
+    m <- m + 1
+    
+    if(G == 1) {
+      d_betaAA <- runif(1, min = 0, max = 0.05)
+      d_phi <- runif(1, min = 0, max = 0.05)
+      d_kappa <- runif(1, min = 0, max = 20)
+      d_alpha <- rbeta(1, 1.5, 8.5)
+      d_zeta <- runif(1, 0, 0.02)
+      
+      d_betaHA <- runif(1, 0, 0.01)
+      d_imp_nEU <- runif(1, 0, 0.3)
+      d_propres_impnEU <- runif(1, 0, 1)
+      
+    } else { 
+      p <- sample(seq(1,N),1,prob = w.old) # check w.old here
+      par <- rtmvnorm(1,mean=res.old[p,], sigma=sigma, lower=lm.low, upper=lm.upp)
+      d_betaAA<-par[1]
+      d_phi<-par[2]
+      d_kappa<-par[3]
+      d_alpha<-par[4]
+      d_zeta <- par[5]
+      
+      d_betaHA<- par[6]
+      d_imp_nEU <- par[7]
+      d_propres_impnEU <- par[8]
+    }
+    
+    new.parms = c(d_betaAA, d_phi, d_kappa, d_alpha, d_zeta, d_betaHA, d_imp_nEU, d_propres_impnEU)
+    
+    if(prior.non.zero(new.parms, lm.low, lm.upp)) {
+      
+      thetaparm[c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHA", "imp_nEU", "propres_impnEU")] <- new.parms
+      
+      dist_mod <- computeDistanceABC_ALEX(distanceABC, fitmodel, tau_range, thetaparm, init.state, data)
+      print(dist_mod)
+      if((dist_mod[1] <= epsilon[["dist"]][G]) && (dist_mod[2] <= epsilon[["foodH"]][G]) && (dist_mod[3] <= epsilon[["AMRH"]][G]) && 
+         (dist_mod[4] <= epsilon[["foodA"]][G]) && (dist_mod[5] <= epsilon[["AMRA"]][G]) && (!is.na(dist_mod))) {
+        
+        if(G==1){
+          w.new <- 1
+        } else {
+          w1 <- prod(c(sapply(c(1:3,5:8), function(b) dunif(new.parms[b], min=lm.low[b], max=lm.upp[b])),
+                       dbeta(new.parms[4], 1.5, 8.5))) 
+          w2 <- sum(sapply(1:N, function(a) w.old[a]* dtmvnorm(new.parms, mean=res.old[a,], sigma=sigma, lower=lm.low, upper=lm.upp)))
+          w.new <- w1/w2
+        }
+        i <- i + 1
+        return(list(dist_mod, m, new.parms, w.new))
+      }
+    }
+  }
+}
 
+# ABC-SMC Function --------------------------------------------------------
+
+ABC_algorithm <- function(N, G, distanceABC, fitmodel, tau_range, init.state, data, epsilon, lm.low, lm.upp, thetaparm)  {
+  out <- list()
+  
+  for(g in 1:G) {
+    
+    print(paste0("Generation ", g, " | Time: ", Sys.time()))
+    
+    if(g == 1) {
+      sigma <- 0
+      res.old <- 0
+      w.old <- 0
+    }
+    
+    clusterExport(cl, varlist = c("amrimp", "computeDistanceABC_ALEX", "prior.non.zero", "sum_square_diff_dist",
+                                  "melt_amp_pigs", "UK_amp_res", "UK_amp_usage", "UK_cont", "UK_hum_ampres"))
+    
+    particles <- parLapply(cl, 
+                           1:N, 
+                           singlerun, 
+                           G = g, 
+                           init.state = init.state,
+                           distanceABC = sum_square_diff_dist,
+                           fitmodel = amrimp, 
+                           thetaparm = thetaparm, 
+                           epsilon = epsilon,
+                           tau_range = melt_amp_pigs$Usage,
+                           data = melt_amp_pigs,
+                           lm.low = lm.low,
+                           lm.upp = lm.upp,
+                           w.old = w.old, 
+                           sigma = sigma, 
+                           res.old = res.old,
+                           N = N)
+    
+    dat_dist <- as.matrix(do.call(rbind, lapply(particles, "[[", 1)))
+    dat_nruns <- do.call(sum, lapply(particles, "[[", 2))
+    res.new <- as.matrix(do.call(rbind, lapply(particles, "[[", 3)))
+    w.new <- as.matrix(do.call(rbind, lapply(particles, "[[", 4)))
+    
+    sigma <- cov(res.new) 
+    res.old <- res.new
+    w.old <- w.new/sum(w.new)
+    
+    out[[g]] <- list(dat_nruns, dat_dist, res.old, w.old)
+    colnames(res.old) <- c("betaAA", "phi", "kappa", "alpha", "zeta", "betaHA", "imp_nEU", "propres_impnEU")
+    write.csv(res.old, file =  paste("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/ABC_post_complex_v4_amppigs_",g,".csv",sep=""), row.names=FALSE)
+  }
+  return(out)
+}
+
+# Running the Model Fit ---------------------------------------------------
+
+detectCores()
+
+cl <- makeCluster(7, type="SOCK")
+
+clusterEvalQ(cl, {c(library("rootSolve"), library("tmvtnorm"))})
+
+test <- ABC_algorithm(N = 1000,
+                      G = 8,
+                      distanceABC = sum_square_diff_dist, 
+                      fitmodel = amrimp, 
+                      tau_range = melt_amp_pigs$Usage, 
+                      init.state = c(Sa=0.98, Isa=0.01, Ira=0.01, 
+                                     Sh = 1,
+                                     IshDA = 0,IrhDA = 0,
+                                     IshA1 = 0,IrhA1 = 0,
+                                     IshA2 = 0,IrhA2 = 0,
+                                     IshA3 = 0,IrhA3 = 0,
+                                     IshA4 = 0,IrhA4 = 0,
+                                     IshA5 = 0,IrhA5 = 0,
+                                     IshA6 = 0,IrhA6 = 0,
+                                     IshA7 = 0,IrhA7 = 0,
+                                     IshA8 = 0,IrhA8 = 0,
+                                     IshA9 = 0,IrhA9 = 0,
+                                     IshAnEU = 0,IrhAnEU = 0), 
+                      data = melt_amp_pigs, 
+                      epsilon = list("dist" =  c(5, 4.5, 4, 3.5, 3.25, 3, 2.75, 2.5),
+                                     "foodH" = c(0.593, 0.593*0.8, 0.593*0.6, 0.593*0.5, 0.593*0.4, 0.593*0.3, 0.593*0.25, 0.593*0.2),
+                                     "AMRH" =  c(UK_hum_ampres, UK_hum_ampres*0.8, UK_hum_ampres*0.6, UK_hum_ampres*0.5, UK_hum_ampres*0.4, UK_hum_ampres*0.3, UK_hum_ampres*0.25, UK_hum_ampres*0.2),
+                                     "foodA" = c(UK_cont, UK_cont*0.8, UK_cont*0.6, UK_cont*0.5, UK_cont*0.4, UK_cont*0.3, UK_cont*0.25, UK_cont*0.2),
+                                     "AMRA" =  c(UK_amp_res, UK_amp_res*0.8, UK_amp_res*0.6, UK_amp_res*0.5, UK_amp_res*0.4, UK_amp_res*0.3, UK_amp_res*0.25, UK_amp_res*0.2)),
+                      lm.low = c(0, 0, 0, 0, 0, 0, 0, 0), 
+                      lm.upp = c(0.05, 0.05, 20, 1, 0.02, 0.01, 0.3, 1), 
+                      thetaparm = c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, psi = 0.656,
+                                    
+                                    share1 = country_data_imp[2,"Normalised_Usage_2018"], share2 = country_data_imp[3,"Normalised_Usage_2018"], share3 = country_data_imp[4,"Normalised_Usage_2018"], 
+                                    share4 = country_data_imp[5,"Normalised_Usage_2018"], share5 = country_data_imp[6,"Normalised_Usage_2018"], share6 = country_data_imp[7,"Normalised_Usage_2018"], 
+                                    share7 = country_data_imp[8,"Normalised_Usage_2018"], share8 = country_data_imp[9,"Normalised_Usage_2018"], 
+                                    share9 = country_data_imp[10,"Normalised_Usage_2018"], share_nEU = 1 - sum(country_data_imp[2:10,"Normalised_Usage_2018"]),
+                                    
+                                    fracimp1 = country_data_imp[2,"FBD_gen"], fracimp2 = country_data_imp[3,"FBD_gen"], fracimp3 = country_data_imp[4,"FBD_gen"], 
+                                    fracimp4 = country_data_imp[5,"FBD_gen"], fracimp5 = country_data_imp[6,"FBD_gen"], fracimp6 = country_data_imp[7,"FBD_gen"], 
+                                    fracimp7 = country_data_imp[8,"FBD_gen"], fracimp8 = country_data_imp[9,"FBD_gen"],
+                                    fracimp9 = country_data_imp[9,"FBD_gen"], fracimp_nEU = country_data_imp[10,"FBD_gen"],
+                                    
+                                    propres_imp1 = country_data_imp[2,"FBD_res"], propres_imp2 = country_data_imp[3,"FBD_res"], propres_imp3 = country_data_imp[4,"FBD_res"], propres_imp4 = country_data_imp[5,"FBD_res"], 
+                                    propres_imp5 = country_data_imp[6,"FBD_res"], propres_imp6 = country_data_imp[7,"FBD_res"], propres_imp7 = country_data_imp[8,"FBD_res"], propres_imp8 = country_data_imp[9,"FBD_res"], 
+                                    propres_imp9 = country_data_imp[10,"FBD_res"],
+                                    
+                                    eta = 0.11016)
+)
+
+stopCluster(cl)
+
+saveRDS(test, file = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/chapter_part2_v4.RDS")
+
+
+# Test Distances ----------------------------------------------------------
+
+plot(density(test[[8]][[2]][,1]))
+
+
+test <- read.csv("/localdisk/home/s1678248/Parallel_Testing/Chapter_3/Output/part2/ABC_post_complex_v3_amppigs_3.csv")
+plot(density(test[,1]))
+plot(density(test[,2]))
+plot(density(test[,3]))
+plot(density(test[,4]))
+plot(density(test[,5]))
+plot(density(test[,6]))
+plot(density(test[,7]))
+plot(density(test[,8]))

@@ -2,12 +2,12 @@ library("deSolve"); library("ggplot2"); library("plotly"); library("reshape2")
 library("bayestestR"); library("tmvtnorm"); library("ggpubr")
 
 rm(list=ls())
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch")
 
 # Posterior Distributions -------------------------------------------------
 
 post_dist_names <- grep("complex",
-                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha"), value = TRUE)
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch"), value = TRUE)
 
 #final_amp_post <- read.csv(tail(grep(list.files(), pattern =  "amppigs_gen", value = TRUE),1))
 
@@ -24,6 +24,15 @@ p_list <- list()
 for(i in 1:(length(post_dist)-1)) {
   p_list[[i]] <- local ({
     name_exp <- post_dist[,c(i,9)]
+    
+    dens <- c()
+    for (j in 1:8){
+      dens[j] <- max(density(name_exp[name_exp$gen == unique(name_exp$gen)[j],1])[[2]])
+    }
+    
+    
+    max <- max(density(post_dist[,c(i,9)][,1])[[2]])
+    
     p <- ggplot(name_exp, aes(x= name_exp[,1], fill=gen)) + geom_density(alpha=.5) +  theme_bw()  +
       geom_vline(xintercept = maps_est[i,2], size = 1.2, col = "red") +
       scale_x_continuous(expand = c(0, 0), name = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
@@ -34,7 +43,7 @@ for(i in 1:(length(post_dist)-1)) {
                                                     expression(paste("Rate of Animal-to-Human Transmission (", beta[HA], ")")),
                                                     expression(paste("Proportion of Contaminated Imports (", Frac[Imp], ")")),
                                                     expression(paste("Proportion of Ampicillin-Resistant Cont Imports (", PropRes[Imp], ")")))[i]) + 
-      scale_y_continuous(expand = c(0, 0), name = " ") +  
+      scale_y_continuous(expand = c(0, 0), limits = c(0,max(dens)*1.2), name = " ") +  
       theme(legend.text=element_text(size=10), axis.text.x=element_text(size=10),axis.ticks.y=element_blank(), axis.text.y=element_blank(),
             axis.title.y=element_text(size=10), axis.title.x= element_text(size=10), plot.margin = unit(c(0.25,0.4,0.15,0.55), "cm"),
             plot.title = element_text(size = 12, vjust = 3, hjust = 0.5, face = "bold")) + 

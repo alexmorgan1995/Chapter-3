@@ -199,9 +199,9 @@ country_data_imp$FBD_res <- rowMeans(country_data_imp[,28:31], na.rm = T)
 
 # Import in Parameters and Set Baseline Parms -----------------------------
 
-setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch")
 
-post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha", pattern = "complex"), 1))
+post_amp <- read.csv(tail(list.files(path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part2/betaha/inch", pattern = "complex"), 1))
 MAP_parms <- map_estimate(post_amp)
 MAP_parms <- data.frame("Parameter" = names(post_amp), 
                         "MAP_Estimate" = colMeans(post_amp))

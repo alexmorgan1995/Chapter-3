@@ -25,6 +25,12 @@ p_list <- list()
 for(i in 1:(length(post_dist)-1)) {
   p_list[[i]] <- local ({
     name_exp <- post_dist[,c(i,7)]
+    
+    dens <- c()
+    for (j in 1:8){
+      dens[j] <- max(density(name_exp[name_exp$gen == unique(name_exp$gen)[j],1])[[2]])
+    }
+    
     p <- ggplot(name_exp, aes(x= name_exp[,1], fill=gen)) + geom_density(alpha=.5) +  theme_bw()  +
       geom_vline(xintercept = maps_est[i,2], size = 1.2, col = "red") +
       scale_x_continuous(expand = c(0, 0), name = c(expression(paste("Rate of Animal-to-Animal Transmission (", beta[AA], ")")),
@@ -33,7 +39,7 @@ for(i in 1:(length(post_dist)-1)) {
                                                     expression(paste("Antibiotic-Resistant Fitness Cost (", alpha, ")")), 
                                                     expression(paste("Background Infection Rate (", zeta, ")")),
                                                     expression(paste("Rate of Animal-to-Human Transmission (", beta[HA], ")")))[i]) + 
-      scale_y_continuous(expand = c(0, 0), name = " ") +  
+      scale_y_continuous(expand = c(0, 0), limits = c(0,max(dens)*1.2), name = " ") +  
       theme(legend.text=element_text(size=10), axis.text.x=element_text(size=10),axis.ticks.y=element_blank(), axis.text.y=element_blank(),
             axis.title.y=element_text(size=10), axis.title.x= element_text(size=10), plot.margin = unit(c(0.25,0.4,0.15,0.55), "cm"),
             plot.title = element_text(size = 12, vjust = 3, hjust = 0.5, face = "bold")) + 
@@ -130,3 +136,11 @@ diag_plots <- ggarrange(p_diag_list[[1]], p_diag_list[[2]], p_diag_list[[3]], p_
 
 ggsave(diag_plots, filename = "diag_plots_homofit.png", dpi = 300, width = 8, height = 11, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+# Parameter HDIs ----------------------------------------------------------
+
+final_amp_post <- read.csv(tail(grep(list.files(), pattern =  "amppigs_gen", value = TRUE),1))
+maps_est
+
+HDI_parms <- hdi(final_amp_post, credMass = 0.95)
