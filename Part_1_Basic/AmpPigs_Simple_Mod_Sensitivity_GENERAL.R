@@ -284,7 +284,7 @@ p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
                                                                   axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
-  labs(title = bquote(bold("Sensitivity Analysis of " ~ "I"["CombH"])), x ="Model Parameters", y = "PRCC") + 
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ "Incidence")), x ="Model Parameters", y = "PRCC") + 
   scale_x_discrete(expand = c(0, 0.7),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
                               expression(beta[AA]), expression(beta[HA]), 
@@ -301,7 +301,7 @@ p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
                                                                   axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
-  labs(title = bquote(bold("Sensitivity Analysis of " ~ "ResRatH")), x ="Model Parameters", y = "PRCC") + 
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ "Human Resistance")), x ="Model Parameters", y = "PRCC") + 
   scale_x_discrete(expand = c(0, 0.7),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
                               expression(beta[AA]), expression(beta[HA]), 
@@ -313,7 +313,7 @@ p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept
 PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
-ggsave(PRCC_plot, filename = "LHS_GENERAL_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
+ggsave(PRCC_plot, filename = "LHS_GENERAL_PRCC.png", dpi = 300, width = 10, height = 10, units = "in",
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # AMR Wrapper Function - for eFAST ----------------------------------------------------
@@ -432,8 +432,8 @@ p_efast_fbd <- ggplot(plotdata_FBD, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.1, 0.7), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = bquote(bold("eFAST total/first order sensitivity indices for ICombH")),
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  labs(title = bquote(bold("eFAST first/second order sensitivity indices for Incidence")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
@@ -447,8 +447,8 @@ p_efast_res <- ggplot(plotdata_res, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.1, 0.7), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = bquote(bold("eFAST total/first order sensitivity indices for Human Resistance")),
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  labs(title = bquote(bold("eFAST first/second order sensitivity indices for Human Resistance")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
@@ -463,6 +463,15 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20), common.legend = TRUE,
                        legend = "bottom") 
 
-ggsave(PRCC_plot, filename = "eFAST_GENERAL.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in", 
+ggsave(PRCC_plot, filename = "eFAST_GENERAL.png", dpi = 300,  width = 8, height = 8, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+tot_plot <- ggarrange(p_fbd, p_res,
+                      p_efast_fbd, p_efast_res, nrow = 4, ncol = 1,
+                       align = "v", labels = c("A","B","C","D"), font.label = c(size = 20), common.legend = TRUE,
+                       legend = "bottom") 
+
+ggsave(tot_plot, filename = "ses_GENERAL_ALL.png", dpi = 300,  width = 8, height = 14, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 

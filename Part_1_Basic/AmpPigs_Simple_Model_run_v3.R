@@ -378,7 +378,7 @@ model_fit_gen <- ggplot(melt_amp_pigs, aes(x = Usage, y= ResPropAnim, color = Co
               aes(x = tau ,ymin = lowHDI, ymax = highHDI), fill = "hotpink", alpha = 0.7, inherit.aes=FALSE) +
   theme(legend.text=element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(1,1,1,1), "cm"),
-        legend.position = "right") + 
+        legend.position = "bottom") + 
 geom_errorbar(aes(ymin=Lower_Amp , ymax=Upper_Amp, color = Country),  size=1.01, inherit.aes =  TRUE) + 
   geom_point(x = UK_amp_usage, y = UK_amp_res, size = 5, col = "red", shape  = 22, fill = "red", alpha = 0.1)
 
@@ -387,9 +387,9 @@ geom_errorbar(aes(ymin=Lower_Amp , ymax=Upper_Amp, color = Country),  size=1.01,
 # Combined Plot -----------------------------------------------------------
 
 comb_gen <- ggarrange(model_fit_gen, plot_list[[1]][[2]] , labels = c("A", "B"), font.label = c(size = 20),
-                      nrow = 1, ncol = 2, align = "h")
+                      nrow = 2, ncol = 1, align = "v")
 
-ggsave(comb_gen, filename = "baseplot_andfits_gen.png", dpi = 300, type = "cairo", width = 15, height = 6, units = "in", 
+ggsave(comb_gen, filename = "baseplot_andfits_gen.png", dpi = 300, type = "cairo", width = 9, height = 11, units = "in", 
        path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 

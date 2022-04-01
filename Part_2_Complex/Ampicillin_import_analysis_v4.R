@@ -359,7 +359,7 @@ for(i in 1:3) {
             legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins (Psi)", 
                                                        y = "Efficacy of Curtailment (EoC)", 
                                                        color = c("Proportion Imports Contaminated", "Proportion Imports Resistant",
-                                                                 "Extent of Reduction Prevalence \n to Contamination ")[i]) +
+                                                                 "Extent of Reduction from \n Carriage to Contamination ")[i]) +
       scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
   
   #ggsave(p_incr, filename = paste0("import_sens_incr_", c("cont","res", "eta")[i] ,".png"), dpi = 300, type = "cairo", width = 9, height = 7, units = "in",
@@ -383,6 +383,100 @@ ggsave(p_incr_list[[3]], filename = "isol_eta_anal.png", dpi = 300, type = "cair
 #       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 #ggsave(com_imp, filename = "comb_imp_anal.png", dpi = 300, type = "cairo", width = 20, height = 7, units = "in",
 #       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+isol_com_imp_fin <- ggarrange(p_incr_list[[1]], p_incr_list[[2]], p_incr_list[[3]], nrow = 3, ncol = 1, labels = c("A", "B", "C"), font.label = c(size = 20))
+
+ggsave(isol_com_imp_fin, filename = "comb_imp_anal_all.png", dpi = 300, type = "cairo", width = 7.5, height = 13, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+
+# FINE DETAIL - Granular Contamination/Resistance (Incremental) Sensitivity ---------------------------
+
+amp_cont_data_incr <- data.frame(matrix(NA, ncol = 10, nrow = 0))
+amp_res_data_incr <- data.frame(matrix(NA, ncol = 10, nrow = 0))
+
+for(i in 1:11) {
+  tempcut <- rep(c(seq(0,0.04, by = 0.004))[i], 10)
+  amp_cont_data_incr <- rbind(amp_cont_data_incr, tempcut)
+  colnames(amp_cont_data_incr) <- grep("fracimp", names(thetaparm), value=TRUE)
+}
+
+for(i in 1:11) {
+  temp <- rep(c(seq(0,0.1, by = 0.01))[i], 10)
+  amp_res_data_incr <- rbind(amp_res_data_incr, temp)
+  colnames(amp_res_data_incr) <- grep("propres_imp", names(thetaparm), value=TRUE)
+}
+
+data_list_incrFINE <- list(amp_cont_data_incr, amp_res_data_incr)
+
+#Run the Scenario Analysis
+data_imp_list_incrFINE <- list()
+
+for(j in 1:3){
+  data_imp_list_incrFINE[[j]] <- local ({
+    if(j == 1) {
+      output <- import_res_func(thetaparm, init, usage_threshold, UK_amp_usage)
+      print("base")
+      
+    } else {
+      output <- list()
+      parms_list <- data_list_incrFINE[[j-1]]
+      parms1 <- thetaparm
+      
+      for(i in 1:nrow(parms_list)) {
+        parms1[colnames(parms_list)] <- parms_list[i,]
+        out <- import_res_func(parms1, init, usage_threshold, UK_amp_usage)
+        output[[i]] <- out 
+        print(paste0(c("base", "cont", "res")[j], " - ", i/nrow(parms_list)))
+      }
+    }
+    return(output)
+  })
+}
+
+data_imp_list_incrFINE[[3]][[1]]
+
+
+#[[3]][[1]]
+#Res = 0 
+#Domestic Usage is 0
+
+#Plot the Incremental Analysis 
+p_incr_list_FINE <- list()
+
+for(i in 1:2) {
+  p_incr_list_FINE[[i]] <- local ({
+    
+    data <- as.data.frame(cbind(sapply(data_imp_list_incrFINE[[i+1]], "[[", 1))) # the 1 at the end refers to either normalised or un-normalised change in FBD
+    colnames(data) <- sapply((list(amp_cont_data_incr[,1], amp_res_data_incr[,1])[[i]])*100, function(x) paste0(x, "%"))
+    data$Baseline <- data_imp_list_incrFINE[[1]][,1]
+    data$usage <- c(seq(0, 1, by = 0.02), 0.656)
+    
+    plot_cont <- melt(data, measure.vars = (head(colnames(data), -1)), id.vars = c("usage"))
+    print(max(plot_cont$value, na.rm = T)*1.2)
+    p_incr <- ggplot(plot_cont, aes(x = usage, y = value, col = variable, size = variable, lty = variable)) + geom_line() +
+      scale_color_manual(values = c(viridis::viridis((ncol(data)-2)), "red")) +
+      scale_size_manual(values = c(rep(1, (ncol(data)-2)), 2)) + 
+      scale_linetype_manual(values = c(rep(1, (ncol(data)-2)), 2)) + theme_bw() + 
+      theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
+            axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
+            legend.spacing.x = unit(0.3, 'cm')) + labs(x ="Proportion of Food From Domestic Origins (Psi)", 
+                                                       y = "Efficacy of Curtailment (EoC)", 
+                                                       color = c("Proportion Imports Contaminated", "Proportion Imports Resistant",
+                                                                 "Extent of Reduction from \n Carriage to Contamination ")[i]) +
+      scale_x_continuous(expand = c(0, 0), limits = c(0,1)) + scale_y_continuous(expand = c(0, 0), limits = c(0, max(plot_cont$value, na.rm = T)*1.05)) + guides(size= "none", linetype = "none") 
+    
+    return(p_incr)
+  })
+}
+
+
+isol_com_imp_FINE <- ggarrange(p_incr_list_FINE[[1]], p_incr_list_FINE[[2]], nrow = 2, ncol = 1, labels = c("A", "B"), font.label = c(size = 20))
+
+ggsave(isol_com_imp_FINE, filename = "comb_imp_anal_fine.png", dpi = 300, type = "cairo", width = 8, height = 11, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # Testing -----------------------------------------------------------------
 
@@ -419,7 +513,7 @@ p_base <- ggplot(data=output_base, aes(x=domusage, y=relchange)) +
   geom_abline(intercept = 0, slope = max(output_base$relchange), size = 3) +
   geom_line(color = "red", size = 1.5, lty = 3) + theme_bw() +
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
-  labs(x ="Proportion of Food From Domestic Origins", y = "Efficacy of Curtailment (EoC)", 
+  labs(x =expression(Proportion~of~Food~From~Domestic~Origins~(psi)), y = "Efficacy of Curtailment (EoC)", 
        color = "Density") +
   theme(legend.position= "bottom", legend.text=element_text(size=12), legend.title =element_text(size=12), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),

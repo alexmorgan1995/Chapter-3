@@ -389,7 +389,7 @@ p_relres <- ggplot(plotrel_res, aes(x = parm, y = original)) + geom_hline(yinter
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
                                                                   axis.text=element_text(size=12), axis.title =element_text(size=12), title = element_text(size=12)) +
-  labs(title = bquote(bold("Sensitivity Analysis of RelRes")), x ="Model Parameters", y = "PRCC") + 
+  labs(title = bquote(bold("Sensitivity Analysis of EoC")), x ="Model Parameters", y = "PRCC") + 
   scale_x_discrete(expand = c(0, 0.7),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
                               expression(beta[AA]), expression(beta[HA]),
@@ -539,7 +539,7 @@ p_efast_fbd <- ggplot(plotdata_FBD, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.25, 0.875), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
   labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelFBD")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
@@ -554,8 +554,8 @@ p_efast_res <- ggplot(plotdata_res, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.8, 0.85), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelRes")),
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  labs(title = bquote(bold("eFAST total/first order sensitivity indices for EoC")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
@@ -576,8 +576,8 @@ ggsave(PRCC_plot, filename = "eFAST_relative.png", dpi = 300, type = "cairo", wi
 #### Combined plot for the RelRes Measure ####
 
 
-p_relres <- p_relres + labs(title = bquote(bold("Sensitivity Analysis of relRes")), x ="", y = "PRCC")
-p_efast_res <- p_efast_res + labs(title = bquote(bold("eFAST total/first order sensitivity indices for RelRes")),
+p_relres <- p_relres + labs(title = bquote(bold("Sensitivity Analysis of EoC")), x ="", y = "PRCC")
+p_efast_res <- p_efast_res + labs(title = bquote(bold("eFAST first/second order sensitivity indices for EoC")),
                                   x ="Model Parameters", y = "Sensitivity Index") 
 comb_relres <- ggarrange(p_relres, p_efast_res, nrow = 2, ncol = 1)
   
