@@ -4,7 +4,7 @@ library("Rcpp")
 
 rm(list=ls())
 setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
-#setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Single Model ------------------------------------------------------------
 
@@ -17,19 +17,19 @@ amrimp <- function(t, y, parms) {
     dIra = (1-alpha)*betaAA*Ira*Sa + tau*Isa - phi*Ira - ra*Ira - ua*Ira + 0.5*zeta*Sa*(1-alpha)
     
     dSh = uh + rh*(Ish+Irh) - 
-      psi*(betaHD*(Isa*eta)*Sh) - 
-      psi*(1-alpha)*(betaHD*(Ira*eta)*Sh) - 
-      (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh) - 
-      (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh) - uh*Sh 
+      psi*(betaHA*(Isa*eta)*Sh) - 
+      psi*(1-alpha)*(betaHA*(Ira*eta)*Sh) - 
+      (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh) - 
+      (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - uh*Sh 
     
-    dIsh =  psi*betaHD*(Isa*eta)*Sh + 
-      (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh) - rh*Ish - uh*Ish 
+    dIsh =  psi*betaHA*(Isa*eta)*Sh + 
+      (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh) - rh*Ish - uh*Ish 
     
-    dIrh = (1-alpha)*psi*(betaHD*(Ira*eta)*Sh) + 
-      (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
+    dIrh = (1-alpha)*psi*(betaHA*(Ira*eta)*Sh) + 
+      (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh) - rh*Irh - uh*Irh 
     
-    CumS = psi*betaHD*(Isa*eta)*Sh + (1-psi)*(betaHI*fracimp*(1-propres_imp)*Sh)
-    CumR = (1-alpha)*psi*(betaHD*(Ira*eta)*Sh) + (1-psi)*(1-alpha)*(betaHI*fracimp*propres_imp*Sh)
+    CumS = psi*betaHA*(Isa*eta)*Sh + (1-psi)*(betaHA*fracimp*(1-propres_imp)*Sh)
+    CumR = (1-alpha)*psi*(betaHA*(Ira*eta)*Sh) + (1-psi)*(1-alpha)*(betaHA*fracimp*propres_imp*Sh)
     
     return(list(c(dSa,dIsa,dIra,dSh,dIsh,dIrh), CumS, CumR))
   })
@@ -92,25 +92,27 @@ UK_amp_usage <- as.numeric(rowMeans(isolamp_hum_raw[isolamp_hum_raw$Country_of_O
 UK_cont <- as.numeric(isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",24])
 UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
 
+UK_food_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",2]
+UK_food_pig_usage <- isolamp_hum_raw[isolamp_hum_raw$Country_of_Origin == "UK Livestock",4]
+
 #Use the mean for the EU as the parameters (minus the UK) - only the main importers 
 
 EU_cont <- mean(rowMeans(country_data_imp[-1,24:27], na.rm = T))
 EU_res <- mean(rowMeans(country_data_imp[-1,28:31], na.rm = T))
 
-
 # Import Fitted Parameters ------------------------------------------------
 
-post_dist_names <- grep("ABC_post_amppigs_",
-                        list.files("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1"), value = TRUE)
+post_dist_names <- grep("ABC_post_amppigs_gen",
+                        list.files("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha"), value = TRUE)
 
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data/Part1/betaha")
 
 post_dist <- lapply(post_dist_names, read.csv)
 
 post_dist <- mapply(cbind, post_dist, "gen" = sapply(1:length(post_dist), function(x) paste0("gen_", x)), 
                     SIMPLIFY=F)
 post_dist <- do.call("rbind", post_dist)
-post_dist_gen <- post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][,1:7]
+post_dist_gen <- post_dist[post_dist$gen == tail(unique(post_dist$gen),1),][,1:6]
 
 maps_est <- map_estimate(post_dist_gen)
 maps_est <- data.frame("Parameter" = colnames(post_dist_gen), "MAP_Estimate" = colMeans(post_dist_gen))
@@ -124,8 +126,7 @@ parmdetails <- rbind(data.frame("Parameter" = "fracimp", "Value" = seq(0, 1, by 
                      data.frame("Parameter" = "eta", "Value" = seq(0, 1, by = 1/100)),
                      
                      data.frame("Parameter" = "betaAA", "Value" = seq(0, maps_est["betaAA",2]*10, by = maps_est["betaAA",2]*10/100)),
-                     data.frame("Parameter" = "betaHI", "Value" = seq(0, maps_est["betaHI",2]*10, by = maps_est["betaHI",2]*10/100)),
-                     data.frame("Parameter" = "betaHD", "Value" = seq(0, maps_est["betaHD",2]*10, by = maps_est["betaHD",2]*10/100)),
+                     data.frame("Parameter" = "betaHA", "Value" = seq(0, maps_est["betaHA",2]*10, by = maps_est["betaHA",2]*10/100)),
                      data.frame("Parameter" = "phi", "Value" = seq(0, maps_est["phi",2]*10, by = maps_est["phi",2]*10/100)),
                      data.frame("Parameter" = "kappa", "Value" = seq(0, maps_est["kappa",2]*10, by = maps_est["kappa",2]*10/100)),
                      data.frame("Parameter" = "alpha", "Value" = seq(0, 1, by = 1/100)),
@@ -140,7 +141,7 @@ parmdetails <- rbind(data.frame("Parameter" = "fracimp", "Value" = seq(0, 1, by 
 init <- c(Sa=0.98, Isa=0.01, Ira=0.01, Sh=1, Ish=0, Irh=0)
 
 parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = maps_est["betaAA",2],
-           betaHI = maps_est["betaHI",2], betaHD = maps_est["betaHD",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
+           betaHA = maps_est["betaHA",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
            alpha = maps_est["alpha",2], zeta = maps_est["zeta",2], psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, 
            eta = 0.11016, tau = UK_amp_usage)
 
@@ -169,7 +170,7 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
     colnames(output)[1:4] <- c("ICombH","ResRatH", "ParmValue", "Parm")
     
     plotnames <- c(bquote("fracimp"~Parameter), bquote("propresimp"~Parameter), bquote(psi~Parameter), bquote(eta~Parameter),
-                   bquote(beta["AA"]~Parameter), bquote(beta["HI"]~Parameter), bquote(beta["HD"]~Parameter),
+                   bquote(beta["AA"]~Parameter), bquote(beta["HA"]~Parameter),
                    bquote(phi~Parameter), bquote(kappa~Parameter), bquote(alpha~Parameter), bquote(zeta~Parameter), bquote(r["H"]~Parameter), bquote(r["A"]~Parameter), 
                    bquote(mu["H"]~Parameter), bquote(mu["A"]~Parameter), bquote(tau~Parameter))[[j]]
     
@@ -190,21 +191,21 @@ for (j in 1:length(unique(parmdetails$Parameter))) {
 #deltaFBD
 pFBD <- plot_grid(plot_grid(suppplotlist[[1]][[1]], suppplotlist[[2]][[1]], suppplotlist[[3]][[1]],suppplotlist[[4]][[1]], suppplotlist[[5]][[1]], 
                                   suppplotlist[[6]][[1]], suppplotlist[[7]][[1]], suppplotlist[[8]][[1]], suppplotlist[[9]][[1]], suppplotlist[[10]][[1]], suppplotlist[[11]][[1]],
-                                  suppplotlist[[12]][[1]], suppplotlist[[13]][[1]], suppplotlist[[14]][[1]],  suppplotlist[[15]][[1]],suppplotlist[[16]][[1]], 
-                            nrow = 6, ncol =3), scale=0.95) + 
+                                  suppplotlist[[12]][[1]], suppplotlist[[13]][[1]], suppplotlist[[14]][[1]], suppplotlist[[15]][[1]], 
+                            nrow = 5, ncol =3), scale=0.95) + 
   draw_label("ICombH", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 pres<- plot_grid(plot_grid(suppplotlist[[1]][[2]], suppplotlist[[2]][[2]], suppplotlist[[3]][[2]],suppplotlist[[4]][[2]], suppplotlist[[5]][[2]], 
                                   suppplotlist[[6]][[2]], suppplotlist[[7]][[2]], suppplotlist[[8]][[2]], suppplotlist[[9]][[2]], suppplotlist[[10]][[2]], suppplotlist[[11]][[2]],
-                                  suppplotlist[[12]][[2]], suppplotlist[[13]][[2]], suppplotlist[[14]][[2]],  suppplotlist[[15]][[2]], suppplotlist[[16]][[2]], 
-                           nrow = 6, ncol =3), scale=0.95) + 
+                                  suppplotlist[[12]][[2]], suppplotlist[[13]][[2]], suppplotlist[[14]][[2]],  suppplotlist[[15]][[2]], 
+                           nrow = 5, ncol =3), scale=0.95) + 
   draw_label("ResRatH", x=  0, y=0.5, vjust= 1.5, angle=90, size = 12)
 
 
 ggsave(pFBD, filename = "ICombH_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 ggsave(pres, filename = "ResRat_mono.png", dpi = 300, type = "cairo", width = 5, height = 7, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 
 # LHS - Run Full Parameters ---------------------------------------------------------------------
@@ -212,7 +213,7 @@ ggsave(pres, filename = "ResRat_mono.png", dpi = 300, type = "cairo", width = 5,
 #First thing is to select how many times we want to sample (h) - this is based on the number of "partitions" in our distribution 
 
 parms <- c(ra = 60^-1, rh = (5.5^-1), ua = 240^-1, uh = 28835^-1, betaAA = maps_est["betaAA",2],
-           betaHI = maps_est["betaHI",2], betaHD = maps_est["betaHD",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
+           betaHA = maps_est["betaHA",2], phi = maps_est["phi",2], kappa = maps_est["kappa",2], 
            alpha = maps_est["alpha",2], zeta = maps_est["zeta",2], psi = 0.656, fracimp = EU_cont, propres_imp = EU_res, 
            eta = 0.11016, tau = UK_amp_usage)
 
@@ -226,15 +227,15 @@ lhs <- maximinLHS(h, length(parms))
 #the qnorm function - you give it a probability (from the LHS matrix) - put in the parameters of the distribution - and then it gives you the  
 
 parmdetails <- data.frame("parms" = c("ra", "rh" ,"ua", "uh",
-                                      "betaAA","betaHD" ,"betaHI",
+                                      "betaAA","betaHA" ,
                                       "phi", "kappa", "alpha", "zeta", 
                                       "psi", "fracimp" , "propres_imp", "eta", "tau" ),
                           "lbound" = c(600^-1, 55^-1, 2400^-1, 288350^-1, 
-                                       parms[["betaAA"]]/10, parms[["betaHD"]]/10,  parms[["betaHI"]]/10, 
+                                       parms[["betaAA"]]/10, parms[["betaHA"]]/10,  
                                        parms[["phi"]]/10, parms[["kappa"]]/10, 0, parms[["zeta"]]/10,
                                        0, 0, 0, 0, 0),
                           "ubound" = c(6^-1, 0.55^-1, 24^-1, 2883.5^-1, 
-                                       parms[["betaAA"]]*10, parms[["betaHD"]]*10,  parms[["betaHI"]]*10, 
+                                       parms[["betaAA"]]*10, parms[["betaHA"]]*10,  
                                        parms[["phi"]]*10, parms[["kappa"]]*10, 1, parms[["zeta"]]*10,
                                        1, 1, 1 , 1, max(dataamp_pigs_raw[,17:20]/1000, na.rm = T)))
 
@@ -266,8 +267,8 @@ for(i in 1:h) {
   print(paste0(round((i/h)*100, digits = 2), "%"))
 }
 
-prcc_fbd <- pcc(modelrunlhs[,1:16], modelrunlhs[,17], nboot = 100, rank=TRUE)
-prcc_res <- pcc(modelrunlhs[,1:16], modelrunlhs[,18], nboot = 100, rank=TRUE)
+prcc_fbd <- pcc(modelrunlhs[,1:15], modelrunlhs[,16], nboot = 100, rank=TRUE)
+prcc_res <- pcc(modelrunlhs[,1:15], modelrunlhs[,17], nboot = 100, rank=TRUE)
 
 modelrunlhs$group <- "Uncertainty" # For later plotting
 
@@ -283,10 +284,10 @@ p_fbd <- ggplot(plotdf_fbd, aes(x = parm, y = original)) + geom_hline(yintercept
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
                                                                   axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
-  labs(title = bquote(bold("Sensitivity Analysis of " ~ "I"["CombH"])), x ="Model Parameters", y = "PRCC") + 
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ "Incidence")), x ="Model Parameters", y = "PRCC") + 
   scale_x_discrete(expand = c(0, 0.7),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
-                              expression(beta[AA]), expression(beta[HD]), expression(beta[HI]),
+                              expression(beta[AA]), expression(beta[HA]), 
                               expression(phi), expression(kappa), expression(alpha), 
                               expression(zeta), expression(psi), expression(Frac[Imp]),
                               expression(PropRes[Imp]), expression(eta), expression(tau)))
@@ -300,10 +301,10 @@ p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept
   theme_bw() + geom_errorbar(aes(ymin=min..c.i., ymax=max..c.i.), width=.1) +
   scale_y_continuous(limits = c(-1, 1), expand = c(0, 0)) + theme(plot.margin=unit(c(0.3,0.3,0.3,0.3),"cm"), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5),
                                                                   axis.text=element_text(size=14), axis.title =element_text(size=14), title = element_text(size=15)) +
-  labs(title = bquote(bold("Sensitivity Analysis of " ~ "ResRatH")), x ="Model Parameters", y = "PRCC") + 
+  labs(title = bquote(bold("Sensitivity Analysis of " ~ "Human Resistance")), x ="Model Parameters", y = "PRCC") + 
   scale_x_discrete(expand = c(0, 0.7),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
-                              expression(beta[AA]), expression(beta[HD]), expression(beta[HI]),
+                              expression(beta[AA]), expression(beta[HA]), 
                               expression(phi), expression(kappa), expression(alpha), 
                               expression(zeta), expression(psi), expression(Frac[Imp]),
                               expression(PropRes[Imp]), expression(eta), expression(tau)))
@@ -312,8 +313,8 @@ p_res <- ggplot(plotdf_res, aes(x = parm, y = original)) + geom_hline(yintercept
 PRCC_plot <- ggarrange(p_fbd, p_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20)) 
 
-ggsave(PRCC_plot, filename = "LHS_GENERAL_PRCC.png", dpi = 300, type = "cairo", width = 10, height = 10, units = "in",
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+ggsave(PRCC_plot, filename = "LHS_GENERAL_PRCC.png", dpi = 300, width = 10, height = 10, units = "in",
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 
 # AMR Wrapper Function - for eFAST ----------------------------------------------------
 
@@ -325,9 +326,9 @@ ode_function_relfbd <- function(x) {
     
     parms = c(ra = x[z,1], rh = x[z,2], ua = x[z,3], uh = x[z,4], 
                        betaAA = x[z,5], 
-                       betaHD = x[z,6], betaHI = x[z,7], phi = x[z,8], 
-                       kappa = x[z,9], alpha = x[z,10], zeta = x[z,11], 
-                       psi = x[z,12], fracimp = x[z,13], propres_imp = x[z,14], eta = x[z,15], tau = x[z,16])
+                       betaHA = x[z,6], phi = x[z,7], 
+                       kappa = x[z,8], alpha = x[z,9], zeta = x[z,10], 
+                       psi = x[z,11], fracimp = x[z,12], propres_imp = x[z,13], eta = x[z,14], tau = x[z,15])
     print(paste0(round(z/nrow(x), digits  = 3)*100,"%"))
     temp1 <- matrix(nrow = 2, ncol = 2)
     
@@ -347,9 +348,9 @@ ode_function_relres <- function(x) {
     
     parms = c(ra = x[z,1], rh = x[z,2], ua = x[z,3], uh = x[z,4], 
               betaAA = x[z,5], 
-              betaHD = x[z,6], betaHI = x[z,7], phi = x[z,8], 
-              kappa = x[z,9], alpha = x[z,10], zeta = x[z,11], 
-              psi = x[z,12], fracimp = x[z,13], propres_imp = x[z,14], eta = x[z,15], tau = x[z,16])
+              betaHA = x[z,6],  phi = x[z,7], 
+              kappa = x[z,8], alpha = x[z,9], zeta = x[z,10], 
+              psi = x[z,11], fracimp = x[z,12], propres_imp = x[z,13], eta = x[z,14], tau = x[z,15])
     print(paste0(round(z/nrow(x), digits  = 3)*100,"%"))
     temp1 <- matrix(nrow = 2, ncol = 2)
     
@@ -365,7 +366,7 @@ ode_function_relres <- function(x) {
 
 factors <- c("ra", "rh", "ua", "uh", 
              "betaAA",
-             "betaHD", "betaHI", "phi", 
+             "betaHA",  "phi", 
              "kappa", "alpha", "zeta",
              "psi", "fracimp", "propres_imp", "eta", "tau")
 
@@ -377,8 +378,7 @@ testfbd <- fast99(model = ode_function_relfbd, factors = factors, n = 1000,
                                list(min=2400^-1, max=24^-1),
                                list(min=288350^-1, max=2883.5^-1),
                                list(min=parms[["betaAA"]]/10, max=parms[["betaAA"]]*10),
-                               list(min=parms[["betaHD"]]/10, max=parms[["betaHD"]]*10),
-                               list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
+                               list(min=parms[["betaHA"]]/10, max=parms[["betaHA"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
                                list(min=0.001, max=1),
@@ -395,8 +395,7 @@ testres <- fast99(model = ode_function_relres, factors = factors, n = 1000,
                                list(min=2400^-1, max=24^-1),
                                list(min=288350^-1, max=2883.5^-1),
                                list(min=parms[["betaAA"]]/10, max=parms[["betaAA"]]*10),
-                               list(min=parms[["betaHD"]]/10, max=parms[["betaHD"]]*10),
-                               list(min=parms[["betaHI"]]/10, max=parms[["betaHI"]]*10),
+                               list(min=parms[["betaHA"]]/10, max=parms[["betaHA"]]*10),
                                list(min=parms[["phi"]]/10, max=parms[["phi"]]*10),
                                list(min=parms[["kappa"]]/10, max=parms[["kappa"]]*10),
                                list(min=0.001, max=1),
@@ -433,12 +432,12 @@ p_efast_fbd <- ggplot(plotdata_FBD, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.1, 0.7), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = bquote(bold("eFAST total/first order sensitivity indices for ICombH")),
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  labs(title = bquote(bold("eFAST first/second order sensitivity indices for Incidence")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
-                              expression(beta[AA]), expression(beta[HD]), expression(beta[HI]),
+                              expression(beta[AA]), expression(beta[HA]), 
                               expression(phi), expression(kappa), expression(alpha), 
                               expression(zeta), expression(psi), expression(Frac[Imp]),
                               expression(PropRes[Imp]), expression(eta), expression(tau)))
@@ -448,12 +447,12 @@ p_efast_res <- ggplot(plotdata_res, aes(fill = variable, x =  X, y = value)) + t
   theme(legend.position=c(0.1, 0.7), legend.text=element_text(size=12), legend.title = element_blank(), axis.text=element_text(size=12), 
         axis.title.y=element_text(size=12), axis.title.x= element_text(size=12), plot.margin = unit(c(0.35,1,0.35,1), "cm"),
         legend.spacing.x = unit(0.3, 'cm'), axis.text.x = element_text(angle = 45, vjust = 0.65, hjust=0.5)) + 
-  scale_fill_manual(labels = c("Total Order", "First Order"), values = c("lightgrey", "darkgrey")) +
-  labs(title = bquote(bold("eFAST total/first order sensitivity indices for Human Resistance")),
+  scale_fill_manual(labels = c("Second Order", "First Order"), values = c("lightgrey", "darkgrey")) +
+  labs(title = bquote(bold("eFAST first/second order sensitivity indices for Human Resistance")),
        x ="", y = "Sensitivity Index")  + 
   scale_x_discrete(expand = c(0, 0.6),
                    labels = c(expression(r[A]), expression(r[H]), expression(mu[H]), expression(mu[A]), 
-                              expression(beta[AA]), expression(beta[HD]), expression(beta[HI]),
+                              expression(beta[AA]), expression(beta[HA]), 
                               expression(phi), expression(kappa), expression(alpha), 
                               expression(zeta), expression(psi), expression(Frac[Imp]),
                               expression(PropRes[Imp]), expression(eta), expression(tau)))
@@ -464,6 +463,15 @@ PRCC_plot <- ggarrange(p_efast_fbd, p_efast_res, nrow = 2, ncol = 1,
                        align = "v", labels = c("A","B"), font.label = c(size = 20), common.legend = TRUE,
                        legend = "bottom") 
 
-ggsave(PRCC_plot, filename = "eFAST_GENERAL.png", dpi = 300, type = "cairo", width = 8, height = 8, units = "in", 
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+ggsave(PRCC_plot, filename = "eFAST_GENERAL.png", dpi = 300,  width = 8, height = 8, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
+
+
+tot_plot <- ggarrange(p_fbd, p_res,
+                      p_efast_fbd, p_efast_res, nrow = 4, ncol = 1,
+                       align = "v", labels = c("A","B","C","D"), font.label = c(size = 20), common.legend = TRUE,
+                       legend = "bottom") 
+
+ggsave(tot_plot, filename = "ses_GENERAL_ALL.png", dpi = 300,  width = 8, height = 14, units = "in", 
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
 

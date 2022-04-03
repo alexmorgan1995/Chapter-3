@@ -3,7 +3,8 @@ library("bayestestR"); library("tmvtnorm"); library("ggpubr"); library("rootSolv
 library("Rcpp")
 
 rm(list=ls())
-setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+#setwd("C:/Users/amorg/Documents/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
+setwd("//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Model_Fit_Data")
 
 # Livestock Dynamics Dataset ----------------------------------------------
 
@@ -62,4 +63,4 @@ pig_amp <- ggplot(melt_amp_pigs, aes(x = Usage, y = ResPropAnim, color = Country
   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0,1)) 
 
 ggsave(pig_amp, filename = "stat_test.png", dpi = 300, type = "cairo", width = 6, height = 6, units = "in", 
-       path = "C:/Users/amorg/Documents/PhD/Chapter_3/Figures/New_Figures")
+       path = "//csce.datastore.ed.ac.uk/csce/biology/users/s1678248/PhD/Chapter_3/Models/Chapter-3/Figures")
